@@ -1,8 +1,83 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Code Sentinel</title>
   <script src="script.js" defer></script>
-  <body>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 300px; /* Adjust popup width as needed */
+      min-height: 200px;
+      font-family: Arial, sans-serif;
+      background-color: #fafafa;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header container to hold logo + title horizontally */
+    .header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    /* Logo styling */
+    .logo {
+      height: 32px;
+      width: auto;
+      margin-right: 8px; /* space between logo and text */
+    }
+
+    h1 {
+      font-size: 20px;
+      color: #333;
+    }
+
+    .description {
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #fff;
+      background-color: #0078d4;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0063a8;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <!-- Be sure to place CSLogo.png in an accessible location in your extension folder -->
+    <img src="CSLogo.png" alt="Code Sentinel Logo" class="logo">
     <h1>Code Sentinel</h1>
-    <!-- <script src="popup.js"></script> -->
-    <button onclick="myFunction()"> Scan Github </button>
-  </body>
+  </div>
+
+  <p class="description">
+    Scan your current GitHub page for suspicious or malicious code.
+  </p>
+  
+  <button onclick="myFunction()">Scan Code</button>
+</body>
 </html>
