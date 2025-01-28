@@ -1,8 +1,16 @@
 {
-    "name": "Code Sentinel",
+    "name": "Code Sentinel", 
     "description": "Base Level Extension",
     "version": "1.0",
     "manifest_version": 3,
+    "permissions": [
+      "activeTab",
+      "tabs"
+    ],
+    "host_permissions": [
+      "https://api.github.com/*",
+      "https://github.com/*"
+    ],
     "action": {
       "default_popup": "CS_mainpage.html",
       "default_icon": "CSLogo.png"
