@@ -22,10 +22,10 @@ It warns developers and users alike of such code before they clone/fetch/pull fr
 
 ## Dependencies
 ---
-- Google Chrome
 Fleshing this out later
 
 ## How to Use
+---
 Fleshing this out later too
 
 ## Issues
