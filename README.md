@@ -1,9 +1,8 @@
 # CodeSentinel
----
-Project for Singapore Institute of Technology's ICT2214 Web Security module.
-
 ## Version 1.2
 ---
+Group project for Singapore Institute of Technology's ICT2214 Web Security module.
+
 CodeSentinel is a Chrome extension that scrapes a GitHub repository web page for potential malicious code.
 It warns developers and users alike of such code before they clone/fetch/pull from the repo for their own uses.
 
