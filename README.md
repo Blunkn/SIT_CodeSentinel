@@ -6,6 +6,16 @@ Group project for Singapore Institute of Technology's ICT2214 Web Security modul
 CodeSentinel is a Chrome extension that scrapes a GitHub repository web page for potential malicious code.
 It warns developers and users alike of such code before they clone/fetch/pull from the repo for their own uses.
 
+! DISCLAIMER
+
+This is a proof-of-concept extension because our lecturers told us to create a "novel" web security solution.
+
+This extension is imperfect and may not detect very unique malicious code signatures.
+
+We are but poor university students and bear no responsibility for any malicious code that slips through during scans.
+
+Audit code manually yourself or use a better, production-quality code scanner.
+
 ## Features
 ---
 - Scans a repository's source code while on its web page.
