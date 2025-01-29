@@ -1,18 +1,37 @@
 {
-    "name": "Code Sentinel", 
-    "description": "Base Level Extension",
-    "version": "1.0",
-    "manifest_version": 3,
-    "permissions": [
+  "name": "Code Sentinel",
+  "description": "Scans GitHub repositories for malicious code and vulnerabilities",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
       "activeTab",
-      "tabs"
-    ],
-    "host_permissions": [
+      "tabs",
+      "storage",
+      "webRequest"
+  ],
+  "host_permissions": [
       "https://api.github.com/*",
       "https://github.com/*"
-    ],
-    "action": {
+  ],
+ 
+  "content_scripts": [{
+      "matches": ["https://github.com/*"],
+      "js": ["script.js"]
+  }],
+  "action": {
       "default_popup": "CS_mainpage.html",
-      "default_icon": "CSLogo.png"
-    }
+      "default_icon": {
+          "16": "CSLogo.png",
+          "48": "CSLogo.png",
+          "128": "CSLogo.png"
+      }
+  },
+  "icons": {
+      "16": "CSLogo.png",
+      "48": "CSLogo.png",
+      "128": "CSLogo.png"
+  },
+  "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self'"
   }
+}

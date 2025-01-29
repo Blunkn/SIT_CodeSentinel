@@ -163,6 +163,11 @@ function displayResults(results) {
   resultsDiv.innerHTML = resultsHTML;
 }
 
+
+
+
+
+
 // main
 async function startScan() {
   const scanBtn = document.getElementById('scanBtn');
@@ -173,9 +178,9 @@ async function startScan() {
     scanBtn.classList.add('scanning');
     resultsDiv.innerHTML = '<div class="alert alert-success">Scanning repository...</div>';
 
-    const url = await getCurrentGitHubUrl();
-    const { owner, repo } = parseGitHubUrl(url);
-    const files = await fetchRepositoryFiles(owner, repo);
+    const url = await getURL();
+    const { owner, repo } = parseURL(url);
+    const files = await fetchRepo(owner, repo);
     
     const scanResults = [];
     for (const file of files) {
@@ -204,11 +209,10 @@ async function startScan() {
 document.addEventListener('DOMContentLoaded', () => {
     const scanBtn = document.getElementById('scanBtn');
     // Attach an event listener to the button
-    scanBtn.addEventListener('click', myFunction);
+    scanBtn.addEventListener('click', startScan);
   });
   
   // This function is called when the button is clicked
   function myFunction() {
-    alert('Button clicked! This is from an external JavaScript file.');
+    alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
   }
-  
