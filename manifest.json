@@ -1,10 +1,21 @@
 {
-    "name": "Code Sentinel",
-    "description": "Base Level Extension",
-    "version": "1.0",
-    "manifest_version": 3,
-    "action": {
-      "default_popup": "CS_mainpage.html",
-      "default_icon": "CSLogo.png"
+  "name": "Code Sentinel",
+  "description": "Base Level Extension",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "CS_mainpage.html",
+    "default_icon": "CSLogo.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/bundle.js"]
     }
-  }
+  ],
+  "permissions": ["scripting", "activeTab"],
+  "host_permissions": ["*://*/*"]
+}

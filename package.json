@@ -1,0 +1,37 @@
+{
+  "name": "sit_codesentinel",
+  "version": "1.0.0",
+  "description": "--- Project for Singapore Institute of Technology's ICT2214 Web Security module.",
+  "main": "background.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "start": "webpack-dev-server --config webpack.config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blunkn/SIT_CodeSentinel.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Blunkn/SIT_CodeSentinel/issues"
+  },
+  "homepage": "https://github.com/Blunkn/SIT_CodeSentinel#readme",
+  "devDependencies": {
+    "browserify-fs": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "stream-browserify": "^3.0.0",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
+  },
+  "dependencies": {
+    "acorn": "^8.14.0",
+    "postcss": "^8.5.1"
+  }
+}
