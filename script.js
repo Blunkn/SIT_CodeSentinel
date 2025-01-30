@@ -84,7 +84,7 @@ function parseURL(url) {
   }
   return {
     owner: match[1],
-    repo: repo[2]
+    repo: match[2]
   }
 }
 
