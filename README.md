@@ -35,7 +35,9 @@ Fleshing this out later
 
 ## How to Use
 ---
-Fleshing this out later too
+1. Download NodeJS (https://nodejs.org/en/download). Downloading the Windows Installer (.msi) is easier if you don't have Node installed
+2. Add NodeJS to your environment variables (Windows)
+3. Run "npx webpack --config webpack.config.js" on SIT_CodeSentinel (Project Folder) everytime you change the code and want to test it
 
 ## Issues
 ---
