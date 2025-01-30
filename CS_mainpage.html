@@ -64,6 +64,76 @@
     button:hover {
       background-color: #0063a8;
     }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    #results {
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .alert {
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .alert-warning {
+      background-color: #fff3e0;
+      border: 1px solid #ffb74d;
+      color: #e65100;
+    }
+
+    .alert-success {
+      background-color: #e8f5e9;
+      border: 1px solid #81c784;
+      color: #2e7d32;
+    }
+
+    .alert-danger {
+      background-color: #ffebee;
+      border: 1px solid #e57373;
+      color: #c62828;
+    }
+
+    .finding {
+      margin-top: 8px;
+    }
+
+    .code-snippet {
+      background-color: rgba(0, 0, 0, 0.05);
+      padding: 8px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-top: 4px;
+    }
+
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      margin-left: 8px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #0078d4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .scanning .spinner {
+      display: inline-block;
+    }
   </style>
 </head>
 
@@ -78,6 +148,15 @@
   </p>
 
   <!-- Button without inline event -->
-  <button id="scanBtn">Scan GitHub</button>
+  <!-- <button id="scanBtn">Scan GitHub</button> -->
+  <div class="scan-controls">
+    <button id="scanBtn">
+      Scan GitHub
+      <span class="spinner"></span>
+    </button>
+  </div>
+
+  <div id="results"></div>
+
 </body>
 </html>
