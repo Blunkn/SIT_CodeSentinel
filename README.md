@@ -19,7 +19,7 @@ Audit code manually yourself or use a better, production-quality code scanner.
 ## Features
 ---
 - Scans a repository's source code while on its web page.
-- Lets you know if any suspicious code is found.
+- Performs static analysis and lets you know if any suspicious code is found.
 - Code signatures it detects:
     - Command injection
     - Data exfil
@@ -31,7 +31,8 @@ Audit code manually yourself or use a better, production-quality code scanner.
 
 ## Dependencies
 ---
-Fleshing this out later
+- Google Chrome
+- Node.js v22.13.1
 
 ## How to Use
 ---
@@ -51,10 +52,15 @@ Fleshing this out later
 ---
 - trumenl - Initial code and templates
 - Norman_C - Documentation research
-- crazycodf, tjx34 - Ideation & concept refining
+- tjx34 - node.js integration
+- crazycodf - Ideation & concept refining
 
 ## Version Control
 ---
+v1.3 - node.js integration
+- imported static analysis tools from node.js libraries
+- libraries parse codes and generate abstract syntax tree
+
 v1.2 - main code dump
 - tweaked .json to have perms for github URLs
 - gave .js scanning functionality
