@@ -1,5 +1,5 @@
 # CodeSentinel
-## Version 1.2
+## Version 1.3
 ---
 Group project for Singapore Institute of Technology's ICT2214 Web Security module.
 
