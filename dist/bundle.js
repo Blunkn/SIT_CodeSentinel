@@ -2,6 +2,32 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./security_scanner.js":
+/*!*****************************!*\
+  !*** ./security_scanner.js ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   parseJSCode: () => (/* binding */ parseJSCode)
+/* harmony export */ });
+/* harmony import */ var acorn__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.mjs");
+// Import parse from acorn (Named import)
+
+
+// A function to parse JavaScript code using acorn
+function parseJSCode(code) {
+    try {
+        const parsed = (0,acorn__WEBPACK_IMPORTED_MODULE_0__.parse)(code, { ecmaVersion: 2020 }); // Using the parse function
+        console.log(parsed);
+    } catch (error) {
+        console.error('Error parsing code:', error);
+    }
+}
+
+/***/ }),
+
 /***/ "./node_modules/acorn/dist/acorn.mjs":
 /*!*******************************************!*\
   !*** ./node_modules/acorn/dist/acorn.mjs ***!
@@ -6245,7 +6271,9 @@ var __webpack_exports__ = {};
   !*** ./script.js ***!
   \*******************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var acorn__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.mjs");
+/* harmony import */ var _security_scanner__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./security_scanner */ "./security_scanner.js");
+
+
 // script.js
 // .json doesn't allow comments so i'm putting here for my own reference
 // manifest_version - a google thing, needs to be 3 for value
@@ -6411,11 +6439,6 @@ function displayResults(results) {
     resultsDiv.innerHTML = resultsHTML;
 }
 
-
-
-
-
-
 // main
 async function startScan() {
     const scanBtn = document.getElementById('scanBtn');
@@ -6451,31 +6474,16 @@ async function startScan() {
         scanBtn.disabled = false;
         scanBtn.classList.remove('scanning');
     }
+
+    startScanner(
+        `
+        const x = 10;
+        function hello() {
+            console.log('Hello, world!');
+        }
+        `
+    );
 }
-
-// Import parse from acorn (Named import)
-
-
-// A function to parse JavaScript code using acorn
-function parseCode(code) {
-    try {
-        const parsed = (0,acorn__WEBPACK_IMPORTED_MODULE_0__.parse)(code, { ecmaVersion: 2020 }); // Using the parse function
-        console.log(parsed);
-    } catch (error) {
-        console.error('Error parsing code:', error);
-    }
-}
-
-// Sample JavaScript code to be parsed
-const code = `
-  const x = 10;
-  function hello() {
-    console.log('Hello, world!');
-  }
-`;
-
-// Parse the code
-parseCode(code);
 
 // Wait for DOM to be ready before attaching event listeners
 document.addEventListener('DOMContentLoaded', () => {
@@ -6489,6 +6497,9 @@ function myFunction() {
     alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
 }
 
+function startScanner(code) {
+    _security_scanner__WEBPACK_IMPORTED_MODULE_0__.parseJSCode(code);
+}
 })();
 
 /******/ })()

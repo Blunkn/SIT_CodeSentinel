@@ -1,3 +1,5 @@
+import * as scanner from "./security_scanner"
+
 // script.js
 // .json doesn't allow comments so i'm putting here for my own reference
 // manifest_version - a google thing, needs to be 3 for value
@@ -163,11 +165,6 @@ function displayResults(results) {
     resultsDiv.innerHTML = resultsHTML;
 }
 
-
-
-
-
-
 // main
 async function startScan() {
     const scanBtn = document.getElementById('scanBtn');
@@ -203,31 +200,16 @@ async function startScan() {
         scanBtn.disabled = false;
         scanBtn.classList.remove('scanning');
     }
+
+    startScanner(
+        `
+        const x = 10;
+        function hello() {
+            console.log('Hello, world!');
+        }
+        `
+    );
 }
-
-// Import parse from acorn (Named import)
-import { parse } from 'acorn';
-
-// A function to parse JavaScript code using acorn
-function parseCode(code) {
-    try {
-        const parsed = parse(code, { ecmaVersion: 2020 }); // Using the parse function
-        console.log(parsed);
-    } catch (error) {
-        console.error('Error parsing code:', error);
-    }
-}
-
-// Sample JavaScript code to be parsed
-const code = `
-  const x = 10;
-  function hello() {
-    console.log('Hello, world!');
-  }
-`;
-
-// Parse the code
-parseCode(code);
 
 // Wait for DOM to be ready before attaching event listeners
 document.addEventListener('DOMContentLoaded', () => {
@@ -239,4 +221,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // This function is called when the button is clicked
 function myFunction() {
     alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
+}
+
+function startScanner(code) {
+    scanner.parseJSCode(code);
 }
