@@ -6441,8 +6441,8 @@ function displayResults(results) {
 
 // main
 async function startScan() {
-    const scanBtn = document.getElementById('scanBtn');
-    const resultsDiv = document.getElementById('results');
+    //const scanBtn = document.getElementById('scanBtn');
+    // const resultsDiv = document.getElementById('results');
 
     try {
         scanBtn.disabled = true;
@@ -6487,9 +6487,9 @@ async function startScan() {
 
 // Wait for DOM to be ready before attaching event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    const scanBtn = document.getElementById('scanBtn');
+    // const scanBtn = document.getElementById('scanBtn');
     // Attach an event listener to the button
-    scanBtn.addEventListener('click', startScan);
+    // scanBtn.addEventListener('click', startScan);
 });
 
 // This function is called when the button is clicked
