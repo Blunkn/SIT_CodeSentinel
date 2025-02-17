@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "acorn": "^8.14.0",
+    "acorn-walk": "^8.3.4",
     "postcss": "^8.5.1"
   }
 }

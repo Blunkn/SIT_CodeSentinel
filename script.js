@@ -1,4 +1,4 @@
-import * as scanner from "./security_scanner"
+import { parse } from 'acorn';
 
 // script.js
 // .json doesn't allow comments so i'm putting here for my own reference
@@ -223,6 +223,15 @@ function myFunction() {
     alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
 }
 
-function startScanner(code) {
-    scanner.parseJSCode(code);
+export function startScanner(code) {
+    parseJSCode(code);
+}
+
+export function parseJSCode(code) {
+    try {
+        const parsed = parse(code, { ecmaVersion: 2020 }); // Using the parse function
+        console.log(parsed);
+    } catch (error) {
+        console.error('Error parsing code:', error);
+    }
 }

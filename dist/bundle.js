@@ -2,32 +2,6 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./security_scanner.js":
-/*!*****************************!*\
-  !*** ./security_scanner.js ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   parseJSCode: () => (/* binding */ parseJSCode)
-/* harmony export */ });
-/* harmony import */ var acorn__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.mjs");
-// Import parse from acorn (Named import)
-
-
-// A function to parse JavaScript code using acorn
-function parseJSCode(code) {
-    try {
-        const parsed = (0,acorn__WEBPACK_IMPORTED_MODULE_0__.parse)(code, { ecmaVersion: 2020 }); // Using the parse function
-        console.log(parsed);
-    } catch (error) {
-        console.error('Error parsing code:', error);
-    }
-}
-
-/***/ }),
-
 /***/ "./node_modules/acorn/dist/acorn.mjs":
 /*!*******************************************!*\
   !*** ./node_modules/acorn/dist/acorn.mjs ***!
@@ -6271,7 +6245,11 @@ var __webpack_exports__ = {};
   !*** ./script.js ***!
   \*******************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _security_scanner__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./security_scanner */ "./security_scanner.js");
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   parseJSCode: () => (/* binding */ parseJSCode),
+/* harmony export */   startScanner: () => (/* binding */ startScanner)
+/* harmony export */ });
+/* harmony import */ var acorn__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.mjs");
 
 
 // script.js
@@ -6441,7 +6419,7 @@ function displayResults(results) {
 
 // main
 async function startScan() {
-    //const scanBtn = document.getElementById('scanBtn');
+    // const scanBtn = document.getElementById('scanBtn');
     // const resultsDiv = document.getElementById('results');
 
     try {
@@ -6487,7 +6465,7 @@ async function startScan() {
 
 // Wait for DOM to be ready before attaching event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // const scanBtn = document.getElementById('scanBtn');
+    //const scanBtn = document.getElementById('scanBtn');
     // Attach an event listener to the button
     // scanBtn.addEventListener('click', startScan);
 });
@@ -6498,7 +6476,16 @@ function myFunction() {
 }
 
 function startScanner(code) {
-    _security_scanner__WEBPACK_IMPORTED_MODULE_0__.parseJSCode(code);
+    parseJSCode(code);
+}
+
+function parseJSCode(code) {
+    try {
+        const parsed = (0,acorn__WEBPACK_IMPORTED_MODULE_0__.parse)(code, { ecmaVersion: 2020 }); // Using the parse function
+        console.log(parsed);
+    } catch (error) {
+        console.error('Error parsing code:', error);
+    }
 }
 })();
 
