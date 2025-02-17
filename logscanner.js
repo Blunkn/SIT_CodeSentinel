@@ -126,7 +126,7 @@ document.getElementById("scanBtn").addEventListener("click", async function() {
         resultsDiv.appendChild(fileElement);
       });
     } else {
-      resultsDiv.innerHTML = "<p>No vulnerabilities detected.</p>";
+      resultsDiv.innerHTML += `<div class="alert alert-success"> No vulnerabilities detected.</div>`
     }
   }
   
