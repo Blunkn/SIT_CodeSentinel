@@ -247,33 +247,33 @@ const getVulnerabilitiesChecks = (code) => {
             if (
                 node.left.type === "MemberExpression" &&
                 node.left.property.name === "innerHTML") {
-                    let isUnsafe = false;
+                let isUnsafe = false;
 
-                    if (node.right.type === "Literal") {
-                        const value = node.right.value;
-                        if (/<script|onerror|onload|javascript:/i.test(value)) {
-                            isUnsafe = true;
-                        }
-                    }
-                    else if (node.right.type === "TemplateLiteral") {
-                        if (node.right.expressions.length > 0) {
-                            isUnsafe = true;
-                        }
-                    }
-                    else if (node.right.type === "Identifier" && userInputs.has(node.right.name)) {
+                if (node.right.type === "Literal") {
+                    const value = node.right.value;
+                    if (/<script|onerror|onload|javascript:/i.test(value)) {
                         isUnsafe = true;
                     }
-                    else {
+                }
+                else if (node.right.type === "TemplateLiteral") {
+                    if (node.right.expressions.length > 0) {
                         isUnsafe = true;
                     }
-                    
-                    if (isUnsafe) {
-                        this.vulnerabilities.push({
-                            pattern: getPattern(code, node),
-                            description: `Potential XSS: Assigning to innerHTML`,
-                            severity: "Critical"
-                        });
-                    }
+                }
+                else if (node.right.type === "Identifier" && userInputs.has(node.right.name)) {
+                    isUnsafe = true;
+                }
+                else {
+                    isUnsafe = true;
+                }
+
+                if (isUnsafe) {
+                    this.vulnerabilities.push({
+                        pattern: getPattern(code, node),
+                        description: `Potential XSS: Assigning to innerHTML`,
+                        severity: "Critical"
+                    });
+                }
             }
         },
 
