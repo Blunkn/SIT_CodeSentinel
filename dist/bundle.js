@@ -2,6 +2,958 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./logscanner.js":
+/*!***********************!*\
+  !*** ./logscanner.js ***!
+  \***********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _script_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./script.js */ "./script.js");
+
+
+document.getElementById("scanBtn").addEventListener("click", async function () {
+  // Show the spinner while scanning
+  const button = this;
+  const spinner = button.querySelector(".spinner");
+  button.disabled = true;
+  spinner.style.display = "inline-block";
+  document.getElementById("results").innerHTML = ""; // Clear previous results
+
+  // Get the current GitHub URL
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+    const url = new URL(tabs[0].url);
+    const pathParts = url.pathname.split('/');
+
+    // Ensure it's a valid GitHub repository page
+    if (pathParts.length < 3) {
+      alert("Please open a valid GitHub repository page.");
+      button.disabled = false;
+      spinner.style.display = "none";
+      return;
+    }
+
+    const user = pathParts[1];
+    const repo = pathParts[2];
+
+    // Call the scan function to scan the repo
+    await scanGitHubRepo(user, repo);
+
+    // Hide the spinner and re-enable the button
+    button.disabled = false;
+    spinner.style.display = "none";
+  });
+});
+
+// Function to fetch file content from GitHub
+async function getFileContentFromGitHub(user, repo, filePath) {
+  const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/${filePath}`;
+
+  try {
+    const response = await fetch(rawUrl);
+    if (response.ok) {
+      return await response.text();
+    } else {
+      console.error(`[ERROR] Failed to fetch ${filePath}: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`[ERROR] Error fetching file ${filePath}: ${error.message}`);
+    return null;
+  }
+}
+
+// Function to get all files from the GitHub repository
+async function getAllFilesInRepo(user, repo) {
+  const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents`;
+
+  try {
+    const response = await fetch(apiUrl);
+    if (response.ok) {
+      const data = await response.json();
+      return data.filter(item => item.type === 'file').map(item => item.path);
+    } else {
+      console.error(`[ERROR] Failed to fetch file list from repo: ${response.status}`);
+      return [];
+    }
+  } catch (error) {
+    console.error(`[ERROR] Error fetching repo file list: ${error.message}`);
+    return [];
+  }
+}
+
+// Function to scan for Log4Shell vulnerabilities
+function scanFile(content) {
+  const vulnerabilities = [];
+  const LOG4J_EXPLOITS = [
+    { pattern: /\$\{jndi:ldap:\/\/.*?\}/g, description: "JNDI LDAP Injection - CVE-2021-44228", severity: "Critical" },
+    { pattern: /\$\{jndi:rmi:\/\/.*?\}/g, description: "JNDI RMI Injection - CVE-2021-44228", severity: "Critical" },
+    { pattern: /\$\{jndi:dns:\/\/.*?\}/g, description: "JNDI DNS Injection - CVE-2021-44228", severity: "High" },
+    { pattern: /org\.apache\.logging\.log4j\.core\.lookup\.JndiLookup/g, description: "JndiLookup Class Usage (Log4Shell)", severity: "Critical" },
+    { pattern: /logger\.error\(.*\$\{jndi:.*?\}.*\)/g, description: "Logging Unfiltered User Input - Possible RCE", severity: "Critical" },
+    { pattern: /logger\.warn\(.*\$\{jndi:.*?\}.*\)/g, description: "Logging Unfiltered User Input - Possible RCE", severity: "Critical" },
+    { pattern: /logger\.info\(.*\$\{jndi:.*?\}.*\)/g, description: "Logging Unfiltered User Input - Potential Vulnerability", severity: "High" },
+    { pattern: /User-Agent: .*?\$\{jndi:.*?\}/g, description: "User-Agent Header Exploit (Log4Shell Attack)", severity: "Critical" },
+    { pattern: /X-Forwarded-For: .*?\$\{jndi:.*?\}/g, description: "X-Forwarded-For Header Exploit (Log4Shell Attack)", severity: "Critical" },
+  ];
+
+  LOG4J_EXPLOITS.forEach(({ pattern, description, severity }) => {
+    if (pattern.test(content)) {
+      vulnerabilities.push({ description, severity, pattern });
+    }
+  });
+
+  return vulnerabilities.length > 0 ? vulnerabilities : null;
+}
+
+// Function to scan the entire GitHub repository
+async function scanGitHubRepo(user, repo) {
+  const files = await getAllFilesInRepo(user, repo);
+  let vulnerableFiles = {};
+
+  for (const filePath of files) {
+    const content = await getFileContentFromGitHub(user, repo, filePath);
+    if (content) {
+      var result = scanFile(content);
+      if (filePath.endsWith(".js")) {
+        if (result) {
+          result = result.concat(acornScan(content));
+        }
+        else {
+          result = acornScan(content);
+        }
+      }
+      if (result) {
+        vulnerableFiles[filePath] = result;
+      }
+    }
+  }
+
+  // Display results
+  const resultsDiv = document.getElementById("results");
+  if (Object.keys(vulnerableFiles).length > 0) {
+    resultsDiv.innerHTML = "<h3>Vulnerabilities Detected:</h3>";
+    Object.entries(vulnerableFiles).forEach(([file, issues]) => {
+      const fileElement = document.createElement("div");
+      fileElement.classList.add("finding");
+      fileElement.innerHTML = `<strong>${file}</strong>`;
+      issues.forEach(({ description, severity, pattern }) => {
+        fileElement.innerHTML += `
+            <div class="alert alert-danger">
+              <strong>${description}</strong> (Severity: ${severity})
+              <pre class="code-snippet">${pattern}</pre>
+            </div>
+          `;
+      });
+      resultsDiv.appendChild(fileElement);
+    });
+  } else {
+    resultsDiv.innerHTML += `<div class="alert alert-success"> No vulnerabilities detected.</div>`
+  }
+}
+
+function acornScan(code) {
+    return _script_js__WEBPACK_IMPORTED_MODULE_0__.parseJSCode(code).length > 0 ? _script_js__WEBPACK_IMPORTED_MODULE_0__.parseJSCode(code) : null;
+}
+
+/***/ }),
+
+/***/ "./script.js":
+/*!*******************!*\
+  !*** ./script.js ***!
+  \*******************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   parseJSCode: () => (/* binding */ parseJSCode)
+/* harmony export */ });
+/* harmony import */ var acorn__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.mjs");
+/* harmony import */ var acorn_walk__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! acorn-walk */ "./node_modules/acorn-walk/dist/walk.mjs");
+
+
+
+// script.js
+// .json doesn't allow comments so i'm putting here for my own reference
+// manifest_version - a google thing, needs to be 3 for value
+// name - chrome shows this on extension list
+// description - chrome web store and extension settings show this
+// version - our own version we set for the extension
+// action - defines that the extension does when on the toolbar
+// permission - defines that chrome APIs will be used
+// host_permissions - defines that URLs the chrome extension can access
+// - blunkn
+
+// SUSPICIOUS/MALICIOUS CODE SIGNATURES
+// uses regex to filter for common malcode patterns
+const SUSPICIOUS_PATTERNS = {
+    // command injection
+    shellCommands: {
+        pattern: /(exec|spawn|fork)\s*\([^)]*(?:sh|bash|powershell|cmd)/i,
+        description: "Potential command injection",
+        severity: "high"
+    },
+
+    // data exfil
+    dataExfiltration: {
+        pattern: /(\.send\s*\(.*{.*}|fetch\s*\([^)]*{method:\s*['"]POST['"]|\.post\s*\()/i,
+        description: "Potential data exfiltration",
+        severity: "high"
+    },
+
+    // evals
+    unsafeEval: {
+        pattern: /eval\(|new\s+Function\(|setTimeout\s*\(\s*['"`][^)]+['"`]\s*\)/i,
+        description: "Unsafe code execution",
+        severity: "high"
+    },
+
+    // obfuscated code
+    base64Strings: {
+        pattern: /['"]([A-Za-z0-9+/]{50,}=[^'"]*)['"]/,
+        description: "Suspicious encoded string",
+        severity: "medium"
+    },
+
+    // cryptomining
+    cryptoMining: {
+        pattern: /CryptoNight|cryptonight|minerId|coinhive|webassembly\.instantiate/i,
+        description: "Potential crypto mining",
+        severity: "high"
+    },
+
+    // env access
+    envAccess: {
+        pattern: /process\.env|dotenv|require\(['"]env/i,
+        description: "Environment variable access",
+        severity: "medium"
+    },
+
+    // file ops
+    fileOps: {
+        pattern: /(?:\.(?:write|append)File|fs\.(?:write|append))/i,
+        description: "Suspicious file operation",
+        severity: "medium"
+    }
+};
+
+// URL & TAB MANAGEMENT
+// ps if anything consult chrome API docs & mozilla web docs
+// get URL of current github tab
+async function getURL() {
+    // [tab] takes from the output of chrome.tabs.query API
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // exception if tab isn't github
+    if (!tab.url.includes('github.com')) {
+        throw new Error('Please navigate to a GitHub repository');
+    }
+    return tab.url;
+}
+
+// parse URL; this takes from the getURL return value
+function parseURL(url) {
+    const match = url.match(/github\.com\/([^/]+)\/([^/]+)/); // match returns an array btw
+    // exception if user is on github, but not specifically on a repo
+    if (!match) {
+        throw new Error('Invalid Github URL');
+    }
+    return {
+        owner: match[1],
+        repo: match[2]
+    }
+}
+
+// use github's API to get a list of all files in the repo
+// this takes from parseURL's return value
+async function fetchRepo(owner, repo) {
+    // recursively scrape the whole repo lmfao
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`);
+    // exception if something goes wrong during fetching
+    if (!response.ok) {
+        throw new Error('Failed to fetch repository files');
+    }
+    const data = await response.json(); // read fetch return value as json
+    return data.tree.filter(item => item.type === 'blob'); // this filters for the actual files
+} // === means strict equality btw, i didn't know this lol
+
+// path input comes from fetchrepo return value
+async function scanFile(owner, repo, path) {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${path}`);
+    }
+    const data = await response.json();
+    const content = atob(data.content); // atob means ascii to binary; github API returns stuff in base64
+    return scanContent(content, path);
+}
+
+// the actual scanner
+function scanContent(content, filepath) {
+    const results = [];
+    const lines = content.split('\n');
+
+    // nested for loop; for every line of code, check against sus patterns iteratively
+    // lineno is Line No. or Line Number
+    lines.forEach((line, lineno) => {
+        for (const [name, config] of Object.entries(SUSPICIOUS_PATTERNS)) {
+            // if condition for regex matches
+            if (config.pattern.test(line)) {
+                results.push({
+                    type: name,
+                    description: config.description,
+                    severity: config.severity,
+                    line: lineno + 1,
+                    snippet: line.trim()
+                });
+            }
+        }
+    });
+    return results.length > 0 ? { filepath, results } : null; // ?: is shorthand if-else; if got stuff return them, else return null
+}
+
+// show scan results
+function displayResults(results) {
+    const resultsDiv = document.getElementById('results');
+    // if scan didn't find anything
+    if (results.length === 0) {
+        resultsDiv.innerHTML = `
+      <div class = "alert alert-success">
+        No suspicious code detected
+      </div>
+    `;
+        return;
+    }
+    const resultsHTML = results.map(result => `
+    <div class="alert alert-warning">
+      <strong>File: ${result.filePath}</strong>
+      ${result.findings.map(finding => `
+        <div class="finding">
+          <div>${finding.description} (Line ${finding.line})</div>
+          <div class="code-snippet">${finding.snippet}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+    resultsDiv.innerHTML = resultsHTML;
+}
+
+// main
+async function startScan() {
+    // const scanBtn = document.getElementById('scanBtn');
+    // const resultsDiv = document.getElementById('results');
+
+    try {
+        scanBtn.disabled = true;
+        scanBtn.classList.add('scanning');
+        resultsDiv.innerHTML = '<div class="alert alert-success">Scanning repository...</div>';
+
+        const url = await getURL();
+        const { owner, repo } = parseURL(url);
+        const files = await fetchRepo(owner, repo);
+
+        const scanResults = [];
+        for (const file of files) {
+            if (file.path.match(/\.(js|ts|jsx|tsx|py|php|rb)$/i)) {
+                const result = await scanFile(owner, repo, file.path);
+                if (result) {
+                    scanResults.push(result);
+                }
+            }
+        }
+
+        displayResults(scanResults);
+    } catch (error) {
+        resultsDiv.innerHTML = `
+      <div class="alert alert-danger">
+        Error: ${error.message}
+      </div>
+    `;
+    } finally {
+        scanBtn.disabled = false;
+        scanBtn.classList.remove('scanning');
+    }
+}
+
+// Wait for DOM to be ready before attaching event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    //const scanBtn = document.getElementById('scanBtn');
+    // Attach an event listener to the button
+    // scanBtn.addEventListener('click', startScan);
+});
+
+// This function is called when the button is clicked
+function myFunction() {
+    alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
+}
+
+function parseJSCode(code) {
+    try {
+        const ast = (0,acorn__WEBPACK_IMPORTED_MODULE_0__.parse)(code, {
+            ecmaVersion: "latest",
+            locations: true,
+            sourceType: "module"
+        });
+        const checks = getVulnerabilitiesChecks(code);
+        acorn_walk__WEBPACK_IMPORTED_MODULE_1__.simple(ast, checks);
+        return checks.vulnerabilities;
+    } catch (error) {
+        console.error("Error parsing JavaScript: ", error);
+        return null;
+    }
+}
+
+const getVulnerabilitiesChecks = (code) => {
+    const userInputs = new Set();
+
+    return {
+        vulnerabilities: [],
+
+        VariableDeclarator(node) {
+            if (node.init && isUserInput(node.init)) {
+                userInputs.add(node.id.name);
+            }
+        },
+
+        AssignmentExpression(node) {
+            if (
+                node.left.type === "MemberExpression" &&
+                node.left.property.name === "innerHTML") {
+                    let isUnsafe = false;
+
+                    if (node.right.type === "Literal") {
+                        const value = node.right.value;
+                        if (/<script|onerror|onload|javascript:/i.test(value)) {
+                            isUnsafe = true;
+                        }
+                    }
+                    else if (node.right.type === "TemplateLiteral") {
+                        if (node.right.expressions.length > 0) {
+                            isUnsafe = true;
+                        }
+                    }
+                    else if (node.right.type === "Identifier" && userInputs.has(node.right.name)) {
+                        isUnsafe = true;
+                    }
+                    else {
+                        isUnsafe = true;
+                    }
+                    
+                    if (isUnsafe) {
+                        this.vulnerabilities.push({
+                            pattern: getPattern(code, node),
+                            description: `Potential XSS: Assigning to innerHTML`,
+                            severity: "Critical"
+                        });
+                    }
+            }
+        },
+
+        CallExpression(node) {
+            // Detect document.write() usage
+            if (
+                node.callee.type === "MemberExpression" &&
+                node.callee.object.name === "document" &&
+                node.callee.property.name === "write"
+            ) {
+                this.vulnerabilities.push({
+                    pattern: getPattern(code, node),
+                    description: `Potential XSS: eval() used`,
+                    severity: "Critical"
+                });
+            }
+
+            // Detect eval() usage
+            if (node.callee.name === "eval") {
+                this.vulnerabilities.push({
+                    pattern: getPattern(code, node),
+                    description: `Potential XSS: eval() used`,
+                    severity: "Critical"
+                });
+            }
+        }
+    }
+};
+
+function getPattern(code, node) {
+    return code.split("\n")[node.loc.start.line - 1].trim();
+}
+
+function isUserInput(node) {
+    return (
+        node.type === "CallExpression" &&
+        (
+            node.callee.name === "prompt" ||
+            node.callee.name === "confirm" ||
+            node.callee.name === "alert" ||
+            (node.callee.object?.name === "document" && node.callee.property?.name === "getElementById")
+        )
+    );
+}
+
+/***/ }),
+
+/***/ "./node_modules/acorn-walk/dist/walk.mjs":
+/*!***********************************************!*\
+  !*** ./node_modules/acorn-walk/dist/walk.mjs ***!
+  \***********************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ancestor: () => (/* binding */ ancestor),
+/* harmony export */   base: () => (/* binding */ base),
+/* harmony export */   findNodeAfter: () => (/* binding */ findNodeAfter),
+/* harmony export */   findNodeAround: () => (/* binding */ findNodeAround),
+/* harmony export */   findNodeAt: () => (/* binding */ findNodeAt),
+/* harmony export */   findNodeBefore: () => (/* binding */ findNodeBefore),
+/* harmony export */   full: () => (/* binding */ full),
+/* harmony export */   fullAncestor: () => (/* binding */ fullAncestor),
+/* harmony export */   make: () => (/* binding */ make),
+/* harmony export */   recursive: () => (/* binding */ recursive),
+/* harmony export */   simple: () => (/* binding */ simple)
+/* harmony export */ });
+// AST walker module for ESTree compatible trees
+
+// A simple walk is one where you simply specify callbacks to be
+// called on specific nodes. The last two arguments are optional. A
+// simple use would be
+//
+//     walk.simple(myTree, {
+//         Expression: function(node) { ... }
+//     });
+//
+// to do something with all expressions. All ESTree node types
+// can be used to identify node types, as well as Expression and
+// Statement, which denote categories of nodes.
+//
+// The base argument can be used to pass a custom (recursive)
+// walker, and state can be used to give this walked an initial
+// state.
+
+function simple(node, visitors, baseVisitor, state, override) {
+  if (!baseVisitor) { baseVisitor = base
+  ; }(function c(node, st, override) {
+    var type = override || node.type;
+    baseVisitor[type](node, st, c);
+    if (visitors[type]) { visitors[type](node, st); }
+  })(node, state, override);
+}
+
+// An ancestor walk keeps an array of ancestor nodes (including the
+// current node) and passes them to the callback as third parameter
+// (and also as state parameter when no other state is present).
+function ancestor(node, visitors, baseVisitor, state, override) {
+  var ancestors = [];
+  if (!baseVisitor) { baseVisitor = base
+  ; }(function c(node, st, override) {
+    var type = override || node.type;
+    var isNew = node !== ancestors[ancestors.length - 1];
+    if (isNew) { ancestors.push(node); }
+    baseVisitor[type](node, st, c);
+    if (visitors[type]) { visitors[type](node, st || ancestors, ancestors); }
+    if (isNew) { ancestors.pop(); }
+  })(node, state, override);
+}
+
+// A recursive walk is one where your functions override the default
+// walkers. They can modify and replace the state parameter that's
+// threaded through the walk, and can opt how and whether to walk
+// their child nodes (by calling their third argument on these
+// nodes).
+function recursive(node, state, funcs, baseVisitor, override) {
+  var visitor = funcs ? make(funcs, baseVisitor || undefined) : baseVisitor
+  ;(function c(node, st, override) {
+    visitor[override || node.type](node, st, c);
+  })(node, state, override);
+}
+
+function makeTest(test) {
+  if (typeof test === "string")
+    { return function (type) { return type === test; } }
+  else if (!test)
+    { return function () { return true; } }
+  else
+    { return test }
+}
+
+var Found = function Found(node, state) { this.node = node; this.state = state; };
+
+// A full walk triggers the callback on each node
+function full(node, callback, baseVisitor, state, override) {
+  if (!baseVisitor) { baseVisitor = base; }
+  var last
+  ;(function c(node, st, override) {
+    var type = override || node.type;
+    baseVisitor[type](node, st, c);
+    if (last !== node) {
+      callback(node, st, type);
+      last = node;
+    }
+  })(node, state, override);
+}
+
+// An fullAncestor walk is like an ancestor walk, but triggers
+// the callback on each node
+function fullAncestor(node, callback, baseVisitor, state) {
+  if (!baseVisitor) { baseVisitor = base; }
+  var ancestors = [], last
+  ;(function c(node, st, override) {
+    var type = override || node.type;
+    var isNew = node !== ancestors[ancestors.length - 1];
+    if (isNew) { ancestors.push(node); }
+    baseVisitor[type](node, st, c);
+    if (last !== node) {
+      callback(node, st || ancestors, ancestors, type);
+      last = node;
+    }
+    if (isNew) { ancestors.pop(); }
+  })(node, state);
+}
+
+// Find a node with a given start, end, and type (all are optional,
+// null can be used as wildcard). Returns a {node, state} object, or
+// undefined when it doesn't find a matching node.
+function findNodeAt(node, start, end, test, baseVisitor, state) {
+  if (!baseVisitor) { baseVisitor = base; }
+  test = makeTest(test);
+  try {
+    (function c(node, st, override) {
+      var type = override || node.type;
+      if ((start == null || node.start <= start) &&
+          (end == null || node.end >= end))
+        { baseVisitor[type](node, st, c); }
+      if ((start == null || node.start === start) &&
+          (end == null || node.end === end) &&
+          test(type, node))
+        { throw new Found(node, st) }
+    })(node, state);
+  } catch (e) {
+    if (e instanceof Found) { return e }
+    throw e
+  }
+}
+
+// Find the innermost node of a given type that contains the given
+// position. Interface similar to findNodeAt.
+function findNodeAround(node, pos, test, baseVisitor, state) {
+  test = makeTest(test);
+  if (!baseVisitor) { baseVisitor = base; }
+  try {
+    (function c(node, st, override) {
+      var type = override || node.type;
+      if (node.start > pos || node.end < pos) { return }
+      baseVisitor[type](node, st, c);
+      if (test(type, node)) { throw new Found(node, st) }
+    })(node, state);
+  } catch (e) {
+    if (e instanceof Found) { return e }
+    throw e
+  }
+}
+
+// Find the outermost matching node after a given position.
+function findNodeAfter(node, pos, test, baseVisitor, state) {
+  test = makeTest(test);
+  if (!baseVisitor) { baseVisitor = base; }
+  try {
+    (function c(node, st, override) {
+      if (node.end < pos) { return }
+      var type = override || node.type;
+      if (node.start >= pos && test(type, node)) { throw new Found(node, st) }
+      baseVisitor[type](node, st, c);
+    })(node, state);
+  } catch (e) {
+    if (e instanceof Found) { return e }
+    throw e
+  }
+}
+
+// Find the outermost matching node before a given position.
+function findNodeBefore(node, pos, test, baseVisitor, state) {
+  test = makeTest(test);
+  if (!baseVisitor) { baseVisitor = base; }
+  var max
+  ;(function c(node, st, override) {
+    if (node.start > pos) { return }
+    var type = override || node.type;
+    if (node.end <= pos && (!max || max.node.end < node.end) && test(type, node))
+      { max = new Found(node, st); }
+    baseVisitor[type](node, st, c);
+  })(node, state);
+  return max
+}
+
+// Used to create a custom walker. Will fill in all missing node
+// type properties with the defaults.
+function make(funcs, baseVisitor) {
+  var visitor = Object.create(baseVisitor || base);
+  for (var type in funcs) { visitor[type] = funcs[type]; }
+  return visitor
+}
+
+function skipThrough(node, st, c) { c(node, st); }
+function ignore(_node, _st, _c) {}
+
+// Node walkers.
+
+var base = {};
+
+base.Program = base.BlockStatement = base.StaticBlock = function (node, st, c) {
+  for (var i = 0, list = node.body; i < list.length; i += 1)
+    {
+    var stmt = list[i];
+
+    c(stmt, st, "Statement");
+  }
+};
+base.Statement = skipThrough;
+base.EmptyStatement = ignore;
+base.ExpressionStatement = base.ParenthesizedExpression = base.ChainExpression =
+  function (node, st, c) { return c(node.expression, st, "Expression"); };
+base.IfStatement = function (node, st, c) {
+  c(node.test, st, "Expression");
+  c(node.consequent, st, "Statement");
+  if (node.alternate) { c(node.alternate, st, "Statement"); }
+};
+base.LabeledStatement = function (node, st, c) { return c(node.body, st, "Statement"); };
+base.BreakStatement = base.ContinueStatement = ignore;
+base.WithStatement = function (node, st, c) {
+  c(node.object, st, "Expression");
+  c(node.body, st, "Statement");
+};
+base.SwitchStatement = function (node, st, c) {
+  c(node.discriminant, st, "Expression");
+  for (var i = 0, list = node.cases; i < list.length; i += 1) {
+    var cs = list[i];
+
+    c(cs, st);
+  }
+};
+base.SwitchCase = function (node, st, c) {
+  if (node.test) { c(node.test, st, "Expression"); }
+  for (var i = 0, list = node.consequent; i < list.length; i += 1)
+    {
+    var cons = list[i];
+
+    c(cons, st, "Statement");
+  }
+};
+base.ReturnStatement = base.YieldExpression = base.AwaitExpression = function (node, st, c) {
+  if (node.argument) { c(node.argument, st, "Expression"); }
+};
+base.ThrowStatement = base.SpreadElement =
+  function (node, st, c) { return c(node.argument, st, "Expression"); };
+base.TryStatement = function (node, st, c) {
+  c(node.block, st, "Statement");
+  if (node.handler) { c(node.handler, st); }
+  if (node.finalizer) { c(node.finalizer, st, "Statement"); }
+};
+base.CatchClause = function (node, st, c) {
+  if (node.param) { c(node.param, st, "Pattern"); }
+  c(node.body, st, "Statement");
+};
+base.WhileStatement = base.DoWhileStatement = function (node, st, c) {
+  c(node.test, st, "Expression");
+  c(node.body, st, "Statement");
+};
+base.ForStatement = function (node, st, c) {
+  if (node.init) { c(node.init, st, "ForInit"); }
+  if (node.test) { c(node.test, st, "Expression"); }
+  if (node.update) { c(node.update, st, "Expression"); }
+  c(node.body, st, "Statement");
+};
+base.ForInStatement = base.ForOfStatement = function (node, st, c) {
+  c(node.left, st, "ForInit");
+  c(node.right, st, "Expression");
+  c(node.body, st, "Statement");
+};
+base.ForInit = function (node, st, c) {
+  if (node.type === "VariableDeclaration") { c(node, st); }
+  else { c(node, st, "Expression"); }
+};
+base.DebuggerStatement = ignore;
+
+base.FunctionDeclaration = function (node, st, c) { return c(node, st, "Function"); };
+base.VariableDeclaration = function (node, st, c) {
+  for (var i = 0, list = node.declarations; i < list.length; i += 1)
+    {
+    var decl = list[i];
+
+    c(decl, st);
+  }
+};
+base.VariableDeclarator = function (node, st, c) {
+  c(node.id, st, "Pattern");
+  if (node.init) { c(node.init, st, "Expression"); }
+};
+
+base.Function = function (node, st, c) {
+  if (node.id) { c(node.id, st, "Pattern"); }
+  for (var i = 0, list = node.params; i < list.length; i += 1)
+    {
+    var param = list[i];
+
+    c(param, st, "Pattern");
+  }
+  c(node.body, st, node.expression ? "Expression" : "Statement");
+};
+
+base.Pattern = function (node, st, c) {
+  if (node.type === "Identifier")
+    { c(node, st, "VariablePattern"); }
+  else if (node.type === "MemberExpression")
+    { c(node, st, "MemberPattern"); }
+  else
+    { c(node, st); }
+};
+base.VariablePattern = ignore;
+base.MemberPattern = skipThrough;
+base.RestElement = function (node, st, c) { return c(node.argument, st, "Pattern"); };
+base.ArrayPattern = function (node, st, c) {
+  for (var i = 0, list = node.elements; i < list.length; i += 1) {
+    var elt = list[i];
+
+    if (elt) { c(elt, st, "Pattern"); }
+  }
+};
+base.ObjectPattern = function (node, st, c) {
+  for (var i = 0, list = node.properties; i < list.length; i += 1) {
+    var prop = list[i];
+
+    if (prop.type === "Property") {
+      if (prop.computed) { c(prop.key, st, "Expression"); }
+      c(prop.value, st, "Pattern");
+    } else if (prop.type === "RestElement") {
+      c(prop.argument, st, "Pattern");
+    }
+  }
+};
+
+base.Expression = skipThrough;
+base.ThisExpression = base.Super = base.MetaProperty = ignore;
+base.ArrayExpression = function (node, st, c) {
+  for (var i = 0, list = node.elements; i < list.length; i += 1) {
+    var elt = list[i];
+
+    if (elt) { c(elt, st, "Expression"); }
+  }
+};
+base.ObjectExpression = function (node, st, c) {
+  for (var i = 0, list = node.properties; i < list.length; i += 1)
+    {
+    var prop = list[i];
+
+    c(prop, st);
+  }
+};
+base.FunctionExpression = base.ArrowFunctionExpression = base.FunctionDeclaration;
+base.SequenceExpression = function (node, st, c) {
+  for (var i = 0, list = node.expressions; i < list.length; i += 1)
+    {
+    var expr = list[i];
+
+    c(expr, st, "Expression");
+  }
+};
+base.TemplateLiteral = function (node, st, c) {
+  for (var i = 0, list = node.quasis; i < list.length; i += 1)
+    {
+    var quasi = list[i];
+
+    c(quasi, st);
+  }
+
+  for (var i$1 = 0, list$1 = node.expressions; i$1 < list$1.length; i$1 += 1)
+    {
+    var expr = list$1[i$1];
+
+    c(expr, st, "Expression");
+  }
+};
+base.TemplateElement = ignore;
+base.UnaryExpression = base.UpdateExpression = function (node, st, c) {
+  c(node.argument, st, "Expression");
+};
+base.BinaryExpression = base.LogicalExpression = function (node, st, c) {
+  c(node.left, st, "Expression");
+  c(node.right, st, "Expression");
+};
+base.AssignmentExpression = base.AssignmentPattern = function (node, st, c) {
+  c(node.left, st, "Pattern");
+  c(node.right, st, "Expression");
+};
+base.ConditionalExpression = function (node, st, c) {
+  c(node.test, st, "Expression");
+  c(node.consequent, st, "Expression");
+  c(node.alternate, st, "Expression");
+};
+base.NewExpression = base.CallExpression = function (node, st, c) {
+  c(node.callee, st, "Expression");
+  if (node.arguments)
+    { for (var i = 0, list = node.arguments; i < list.length; i += 1)
+      {
+        var arg = list[i];
+
+        c(arg, st, "Expression");
+      } }
+};
+base.MemberExpression = function (node, st, c) {
+  c(node.object, st, "Expression");
+  if (node.computed) { c(node.property, st, "Expression"); }
+};
+base.ExportNamedDeclaration = base.ExportDefaultDeclaration = function (node, st, c) {
+  if (node.declaration)
+    { c(node.declaration, st, node.type === "ExportNamedDeclaration" || node.declaration.id ? "Statement" : "Expression"); }
+  if (node.source) { c(node.source, st, "Expression"); }
+};
+base.ExportAllDeclaration = function (node, st, c) {
+  if (node.exported)
+    { c(node.exported, st); }
+  c(node.source, st, "Expression");
+};
+base.ImportDeclaration = function (node, st, c) {
+  for (var i = 0, list = node.specifiers; i < list.length; i += 1)
+    {
+    var spec = list[i];
+
+    c(spec, st);
+  }
+  c(node.source, st, "Expression");
+};
+base.ImportExpression = function (node, st, c) {
+  c(node.source, st, "Expression");
+};
+base.ImportSpecifier = base.ImportDefaultSpecifier = base.ImportNamespaceSpecifier = base.Identifier = base.PrivateIdentifier = base.Literal = ignore;
+
+base.TaggedTemplateExpression = function (node, st, c) {
+  c(node.tag, st, "Expression");
+  c(node.quasi, st, "Expression");
+};
+base.ClassDeclaration = base.ClassExpression = function (node, st, c) { return c(node, st, "Class"); };
+base.Class = function (node, st, c) {
+  if (node.id) { c(node.id, st, "Pattern"); }
+  if (node.superClass) { c(node.superClass, st, "Expression"); }
+  c(node.body, st);
+};
+base.ClassBody = function (node, st, c) {
+  for (var i = 0, list = node.body; i < list.length; i += 1)
+    {
+    var elt = list[i];
+
+    c(elt, st);
+  }
+};
+base.MethodDefinition = base.PropertyDefinition = base.Property = function (node, st, c) {
+  if (node.computed) { c(node.key, st, "Expression"); }
+  if (node.value) { c(node.value, st, "Expression"); }
+};
+
+
+
+
+/***/ }),
+
 /***/ "./node_modules/acorn/dist/acorn.mjs":
 /*!*******************************************!*\
   !*** ./node_modules/acorn/dist/acorn.mjs ***!
@@ -6238,257 +7190,13 @@ function tokenizer(input, options) {
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
-(() => {
-/*!*******************!*\
-  !*** ./script.js ***!
-  \*******************/
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   parseJSCode: () => (/* binding */ parseJSCode),
-/* harmony export */   startScanner: () => (/* binding */ startScanner)
-/* harmony export */ });
-/* harmony import */ var acorn__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! acorn */ "./node_modules/acorn/dist/acorn.mjs");
-
-
-// script.js
-// .json doesn't allow comments so i'm putting here for my own reference
-// manifest_version - a google thing, needs to be 3 for value
-// name - chrome shows this on extension list
-// description - chrome web store and extension settings show this
-// version - our own version we set for the extension
-// action - defines that the extension does when on the toolbar
-// permission - defines that chrome APIs will be used
-// host_permissions - defines that URLs the chrome extension can access
-// - blunkn
-
-// SUSPICIOUS/MALICIOUS CODE SIGNATURES
-// uses regex to filter for common malcode patterns
-const SUSPICIOUS_PATTERNS = {
-    // command injection
-    shellCommands: {
-        pattern: /(exec|spawn|fork)\s*\([^)]*(?:sh|bash|powershell|cmd)/i,
-        description: "Potential command injection",
-        severity: "high"
-    },
-
-    // data exfil
-    dataExfiltration: {
-        pattern: /(\.send\s*\(.*{.*}|fetch\s*\([^)]*{method:\s*['"]POST['"]|\.post\s*\()/i,
-        description: "Potential data exfiltration",
-        severity: "high"
-    },
-
-    // evals
-    unsafeEval: {
-        pattern: /eval\(|new\s+Function\(|setTimeout\s*\(\s*['"`][^)]+['"`]\s*\)/i,
-        description: "Unsafe code execution",
-        severity: "high"
-    },
-
-    // obfuscated code
-    base64Strings: {
-        pattern: /['"]([A-Za-z0-9+/]{50,}=[^'"]*)['"]/,
-        description: "Suspicious encoded string",
-        severity: "medium"
-    },
-
-    // cryptomining
-    cryptoMining: {
-        pattern: /CryptoNight|cryptonight|minerId|coinhive|webassembly\.instantiate/i,
-        description: "Potential crypto mining",
-        severity: "high"
-    },
-
-    // env access
-    envAccess: {
-        pattern: /process\.env|dotenv|require\(['"]env/i,
-        description: "Environment variable access",
-        severity: "medium"
-    },
-
-    // file ops
-    fileOps: {
-        pattern: /(?:\.(?:write|append)File|fs\.(?:write|append))/i,
-        description: "Suspicious file operation",
-        severity: "medium"
-    }
-};
-
-// URL & TAB MANAGEMENT
-// ps if anything consult chrome API docs & mozilla web docs
-// get URL of current github tab
-async function getURL() {
-    // [tab] takes from the output of chrome.tabs.query API
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    // exception if tab isn't github
-    if (!tab.url.includes('github.com')) {
-        throw new Error('Please navigate to a GitHub repository');
-    }
-    return tab.url;
-}
-
-// parse URL; this takes from the getURL return value
-function parseURL(url) {
-    const match = url.match(/github\.com\/([^/]+)\/([^/]+)/); // match returns an array btw
-    // exception if user is on github, but not specifically on a repo
-    if (!match) {
-        throw new Error('Invalid Github URL');
-    }
-    return {
-        owner: match[1],
-        repo: match[2]
-    }
-}
-
-// use github's API to get a list of all files in the repo
-// this takes from parseURL's return value
-async function fetchRepo(owner, repo) {
-    // recursively scrape the whole repo lmfao
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`);
-    // exception if something goes wrong during fetching
-    if (!response.ok) {
-        throw new Error('Failed to fetch repository files');
-    }
-    const data = await response.json(); // read fetch return value as json
-    return data.tree.filter(item => item.type === 'blob'); // this filters for the actual files
-} // === means strict equality btw, i didn't know this lol
-
-// path input comes from fetchrepo return value
-async function scanFile(owner, repo, path) {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${path}`);
-    }
-    const data = await response.json();
-    const content = atob(data.content); // atob means ascii to binary; github API returns stuff in base64
-    return scanContent(content, path);
-}
-
-// the actual scanner
-function scanContent(content, filepath) {
-    const results = [];
-    const lines = content.split('\n');
-
-    // nested for loop; for every line of code, check against sus patterns iteratively
-    // lineno is Line No. or Line Number
-    lines.forEach((line, lineno) => {
-        for (const [name, config] of Object.entries(SUSPICIOUS_PATTERNS)) {
-            // if condition for regex matches
-            if (config.pattern.test(line)) {
-                results.push({
-                    type: name,
-                    description: config.description,
-                    severity: config.severity,
-                    line: lineno + 1,
-                    snippet: line.trim()
-                });
-            }
-        }
-    });
-    return results.length > 0 ? { filepath, results } : null; // ?: is shorthand if-else; if got stuff return them, else return null
-}
-
-// show scan results
-function displayResults(results) {
-    const resultsDiv = document.getElementById('results');
-    // if scan didn't find anything
-    if (results.length === 0) {
-        resultsDiv.innerHTML = `
-      <div class = "alert alert-success">
-        No suspicious code detected
-      </div>
-    `;
-        return;
-    }
-    const resultsHTML = results.map(result => `
-    <div class="alert alert-warning">
-      <strong>File: ${result.filePath}</strong>
-      ${result.findings.map(finding => `
-        <div class="finding">
-          <div>${finding.description} (Line ${finding.line})</div>
-          <div class="code-snippet">${finding.snippet}</div>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
-
-    resultsDiv.innerHTML = resultsHTML;
-}
-
-// main
-async function startScan() {
-    // const scanBtn = document.getElementById('scanBtn');
-    // const resultsDiv = document.getElementById('results');
-
-    try {
-        scanBtn.disabled = true;
-        scanBtn.classList.add('scanning');
-        resultsDiv.innerHTML = '<div class="alert alert-success">Scanning repository...</div>';
-
-        const url = await getURL();
-        const { owner, repo } = parseURL(url);
-        const files = await fetchRepo(owner, repo);
-
-        const scanResults = [];
-        for (const file of files) {
-            if (file.path.match(/\.(js|ts|jsx|tsx|py|php|rb)$/i)) {
-                const result = await scanFile(owner, repo, file.path);
-                if (result) {
-                    scanResults.push(result);
-                }
-            }
-        }
-
-        displayResults(scanResults);
-    } catch (error) {
-        resultsDiv.innerHTML = `
-      <div class="alert alert-danger">
-        Error: ${error.message}
-      </div>
-    `;
-    } finally {
-        scanBtn.disabled = false;
-        scanBtn.classList.remove('scanning');
-    }
-
-    startScanner(
-        `
-        const x = 10;
-        function hello() {
-            console.log('Hello, world!');
-        }
-        `
-    );
-}
-
-// Wait for DOM to be ready before attaching event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    //const scanBtn = document.getElementById('scanBtn');
-    // Attach an event listener to the button
-    // scanBtn.addEventListener('click', startScan);
-});
-
-// This function is called when the button is clicked
-function myFunction() {
-    alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
-}
-
-function startScanner(code) {
-    parseJSCode(code);
-}
-
-function parseJSCode(code) {
-    try {
-        const parsed = (0,acorn__WEBPACK_IMPORTED_MODULE_0__.parse)(code, { ecmaVersion: 2020 }); // Using the parse function
-        console.log(parsed);
-    } catch (error) {
-        console.error('Error parsing code:', error);
-    }
-}
-})();
-
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	__webpack_require__("./script.js");
+/******/ 	var __webpack_exports__ = __webpack_require__("./logscanner.js");
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=bundle.js.map

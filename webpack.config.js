@@ -2,7 +2,9 @@ const path = require('path');
 
 module.exports = {
   // Define the entry point for your application
-  entry: './script.js', // Your main entry file
+  entry: {
+    main: ['./script.js', './logscanner.js'], // Include both files
+  },
 
   // Output the bundled file to the 'dist' directory
   output: {

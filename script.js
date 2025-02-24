@@ -1,4 +1,5 @@
 import { parse } from 'acorn';
+import * as walk from 'acorn-walk';
 
 // script.js
 // .json doesn't allow comments so i'm putting here for my own reference
@@ -200,15 +201,6 @@ async function startScan() {
         scanBtn.disabled = false;
         scanBtn.classList.remove('scanning');
     }
-
-    startScanner(
-        `
-        const x = 10;
-        function hello() {
-            console.log('Hello, world!');
-        }
-        `
-    );
 }
 
 // Wait for DOM to be ready before attaching event listeners
@@ -223,15 +215,106 @@ function myFunction() {
     alert('Button clicked! Testing, this is an alert function myFunction() that is triggered in the script.js file.');
 }
 
-export function startScanner(code) {
-    parseJSCode(code);
-}
-
 export function parseJSCode(code) {
     try {
-        const parsed = parse(code, { ecmaVersion: 2020 }); // Using the parse function
-        console.log(parsed);
+        const ast = parse(code, {
+            ecmaVersion: "latest",
+            locations: true,
+            sourceType: "module"
+        });
+        const checks = getVulnerabilitiesChecks(code);
+        walk.simple(ast, checks);
+        return checks.vulnerabilities;
     } catch (error) {
-        console.error('Error parsing code:', error);
+        console.error("Error parsing JavaScript: ", error);
+        return null;
     }
+}
+
+const getVulnerabilitiesChecks = (code) => {
+    const userInputs = new Set();
+
+    return {
+        vulnerabilities: [],
+
+        VariableDeclarator(node) {
+            if (node.init && isUserInput(node.init)) {
+                userInputs.add(node.id.name);
+            }
+        },
+
+        AssignmentExpression(node) {
+            if (
+                node.left.type === "MemberExpression" &&
+                node.left.property.name === "innerHTML") {
+                    let isUnsafe = false;
+
+                    if (node.right.type === "Literal") {
+                        const value = node.right.value;
+                        if (/<script|onerror|onload|javascript:/i.test(value)) {
+                            isUnsafe = true;
+                        }
+                    }
+                    else if (node.right.type === "TemplateLiteral") {
+                        if (node.right.expressions.length > 0) {
+                            isUnsafe = true;
+                        }
+                    }
+                    else if (node.right.type === "Identifier" && userInputs.has(node.right.name)) {
+                        isUnsafe = true;
+                    }
+                    else {
+                        isUnsafe = true;
+                    }
+                    
+                    if (isUnsafe) {
+                        this.vulnerabilities.push({
+                            pattern: getPattern(code, node),
+                            description: `Potential XSS: Assigning to innerHTML`,
+                            severity: "Critical"
+                        });
+                    }
+            }
+        },
+
+        CallExpression(node) {
+            // Detect document.write() usage
+            if (
+                node.callee.type === "MemberExpression" &&
+                node.callee.object.name === "document" &&
+                node.callee.property.name === "write"
+            ) {
+                this.vulnerabilities.push({
+                    pattern: getPattern(code, node),
+                    description: `Potential XSS: eval() used`,
+                    severity: "Critical"
+                });
+            }
+
+            // Detect eval() usage
+            if (node.callee.name === "eval") {
+                this.vulnerabilities.push({
+                    pattern: getPattern(code, node),
+                    description: `Potential XSS: eval() used`,
+                    severity: "Critical"
+                });
+            }
+        }
+    }
+};
+
+function getPattern(code, node) {
+    return code.split("\n")[node.loc.start.line - 1].trim();
+}
+
+function isUserInput(node) {
+    return (
+        node.type === "CallExpression" &&
+        (
+            node.callee.name === "prompt" ||
+            node.callee.name === "confirm" ||
+            node.callee.name === "alert" ||
+            (node.callee.object?.name === "document" && node.callee.property?.name === "getElementById")
+        )
+    );
 }

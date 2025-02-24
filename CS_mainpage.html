@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Code Sentinel</title>
@@ -14,7 +15,8 @@
     }
 
     body {
-      width: 300px; /* Adjust popup width if desired */
+      width: 300px;
+      /* Adjust popup width if desired */
       min-height: 200px;
       font-family: Arial, sans-serif;
       background-color: #fafafa;
@@ -127,8 +129,13 @@
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
 
     .scanning .spinner {
@@ -157,8 +164,7 @@
   </div>
 
   <div id="results"></div>
-  <script type="module" src="logscanner.js"></script>
-
 
 </body>
+
 </html>
