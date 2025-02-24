@@ -43,6 +43,16 @@
       "pattern": "X-Forwarded-For: .*?\\$\\{jndi:.*?\\}",
       "description": "X-Forwarded-For Header Exploit (Log4Shell Attack)",
       "severity": "Critical"
-    }
+    },
+    {
+      "pattern": "msdt.exe\\s*/?[^\\s]*\\s*/.*?http[s]?://",
+      "description": "Microsoft Support Diagnostic Tool (Follina) - CVE-2022-30190",
+      "severity": "Critical"
+    },
+    {
+      "pattern": "(admin|root|superuser|account)=[0-9]+|\\/api\\/users\\/\\d+|\\/profile\\?id=\\d+",
+      "description": "Potential Insecure Direct Object Reference (IDOR) - Broken Access Control",
+      "severity": "High"
+    }    
   ]
   
