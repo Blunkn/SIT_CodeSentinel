@@ -1,29 +1,16 @@
-// This file is intentionally vulnerable for testing purposes, to see if vulnerability scanner can flag these secrets out.
+// This file is intentionally vulnerable for testing purposes, to see if vulnerability scanner can flag these internal ips out.
 
-// API Keys
-const GOOGLE_API_KEY = "AIzaSyD-EXAMPLEKEY1234567890";
-const AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
-const AZURE_CLIENT_SECRET = "example-azure-client-secret-123456";
 
-// Passwords
-const DB_PASSWORD = "supersecurepassword123";
-const ADMIN_PASSWORD = "admin123";
+// Hardcoded Internal IPs
+const DEV_SERVER = "192.168.1.10";
+const STAGING_IP = "10.0.2.15";
 
-// JWT Secrets
-const JWT_SECRET = "myjwtsecretkeyshouldbekeptsecret";
+// Hardcoded Public IPs
+const PROD_SERVER = "34.78.102.45";
 
-// Hardcoded Credentials
-const username = "admin";
-const password = "P@ssw0rd";
+// Hardcoded URLs
+const INTERNAL_API = "https://internal.mycompany.com/api/v1";
+const LOCALHOST_URL = "http://localhost:5000";
 
-// Private Keys
-const PRIVATE_KEY = `-----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEA7v/NiEXAMPLEKEYBASE64ENCRYPTEDINFO
------END RSA PRIVATE KEY-----`;
-
-// Placeholder for actual application logic
-function doSomething() {
-    console.log("Running application logic...");
-}
-
-doSomething();
+// Hardcoded API Endpoints
+const EXPOSED_API = "https://api.example.com/v1/data";
