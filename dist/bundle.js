@@ -45,9 +45,28 @@ document.getElementById("scanBtn").addEventListener("click", async function () {
     });
 });
 
+async function getDefaultBranch(user, repo) {
+    const apiUrl = `https://api.github.com/repos/${user}/${repo}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+            const data = await response.json();
+            return data.default_branch;
+        } else {
+            console.error(`[ERROR] Failed to fetch default branch: ${response.status}`);
+            return "main";
+        }
+    } catch (error) {
+        console.error(`[ERROR] Error fetching default branch: ${error.message}`);
+        return "main";
+    }
+}
+
 // Function to fetch file content from GitHub
 async function getFileContentFromGitHub(user, repo, filePath) {
-    const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/${filePath}`;
+    const defaultBranch = await getDefaultBranch(user, repo);
+    const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/${defaultBranch}/${filePath}`;
 
     try {
         const response = await fetch(rawUrl);
@@ -64,18 +83,33 @@ async function getFileContentFromGitHub(user, repo, filePath) {
 }
 
 // Function to get all files from the GitHub repository
-async function getAllFilesInRepo(user, repo) {
-    const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents`;
+async function getAllFilesInRepo(user, repo, path = "") {
+    const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
 
     try {
         const response = await fetch(apiUrl);
-        if (response.ok) {
-            const data = await response.json();
-            return data.filter(item => item.type === 'file').map(item => item.path);
-        } else {
-            console.error(`[ERROR] Failed to fetch file list from repo: ${response.status}`);
+        if (!response.ok) {
+            console.error(`[Error] Failed to fetch file list from ${path || "root"}: ${response.status}`);
             return [];
         }
+        
+        const data = await response.json();
+        let files = [];
+
+        for (const item of data) {
+            if (item.type === "file") {
+                files.push(item.path);
+            } else if (item.type === "dir") {
+                if (item.path.includes("node_modules")) {
+                    console.log(`[INFO] Skipping folder: ${item.path}`);
+                    continue;
+                }
+                const subFiles = await getAllFilesInRepo(user, repo, item.path);
+                files = files.concat(subFiles);
+            }
+        }
+
+        return files;
     } catch (error) {
         console.error(`[ERROR] Error fetching repo file list: ${error.message}`);
         return [];
@@ -126,6 +160,15 @@ async function scanGitHubRepo(user, repo) {
                     result = acornScan(content);
                 }
             }
+            else if (filePath.endsWith(".html")) {
+                const scripts = extractScriptsFromHTML(content);
+                scripts.forEach(script => {
+                    const scriptVulns = acornScan(script);
+                    if (scriptVulns) {
+                        result = result ? result.concat(scriptVulns) : scriptVulns;
+                    }
+                });
+            }
             if (result) {
                 vulnerableFiles[filePath] = result;
             }
@@ -157,6 +200,18 @@ async function scanGitHubRepo(user, repo) {
 
 function acornScan(code) {
     return _script_js__WEBPACK_IMPORTED_MODULE_0__.parseJSCode(code).length > 0 ? _script_js__WEBPACK_IMPORTED_MODULE_0__.parseJSCode(code) : null;
+}
+
+function extractScriptsFromHTML(code) {
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let scripts = [];
+    let match;
+
+    while ((match = scriptRegex.exec(code)) !== null) {
+        scripts.push(match[1]);
+    }
+
+    return scripts;
 }
 
 /***/ }),
@@ -421,7 +476,9 @@ const getVulnerabilitiesChecks = (code) => {
         AssignmentExpression(node) {
             if (
                 node.left.type === "MemberExpression" &&
-                node.left.property.name === "innerHTML") {
+                (node.left.property.name === "innerHTML" ||
+                    node.left.property.name === "outerHTML")
+            ) {
                 let isUnsafe = false;
 
                 if (node.right.type === "Literal") {
@@ -445,7 +502,7 @@ const getVulnerabilitiesChecks = (code) => {
                 if (isUnsafe) {
                     this.vulnerabilities.push({
                         pattern: getPattern(code, node),
-                        description: `Potential XSS: Assigning to innerHTML`,
+                        description: `Potential XSS: Assigning to ${node.left.property.name}`,
                         severity: "Critical"
                     });
                 }
@@ -461,7 +518,7 @@ const getVulnerabilitiesChecks = (code) => {
             ) {
                 this.vulnerabilities.push({
                     pattern: getPattern(code, node),
-                    description: `Potential XSS: eval() used`,
+                    description: `Potential XSS: document.write() used`,
                     severity: "Critical"
                 });
             }
@@ -475,7 +532,7 @@ const getVulnerabilitiesChecks = (code) => {
                 });
             }
         }
-    }
+    };
 };
 
 function getPattern(code, node) {
