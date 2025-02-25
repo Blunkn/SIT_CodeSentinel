@@ -246,7 +246,9 @@ const getVulnerabilitiesChecks = (code) => {
         AssignmentExpression(node) {
             if (
                 node.left.type === "MemberExpression" &&
-                node.left.property.name === "innerHTML") {
+                (node.left.property.name === "innerHTML" ||
+                    node.left.property.name === "outerHTML")
+            ) {
                 let isUnsafe = false;
 
                 if (node.right.type === "Literal") {
@@ -270,7 +272,7 @@ const getVulnerabilitiesChecks = (code) => {
                 if (isUnsafe) {
                     this.vulnerabilities.push({
                         pattern: getPattern(code, node),
-                        description: `Potential XSS: Assigning to innerHTML`,
+                        description: `Potential XSS: Assigning to ${node.left.property.name}`,
                         severity: "Critical"
                     });
                 }
@@ -286,7 +288,7 @@ const getVulnerabilitiesChecks = (code) => {
             ) {
                 this.vulnerabilities.push({
                     pattern: getPattern(code, node),
-                    description: `Potential XSS: eval() used`,
+                    description: `Potential XSS: document.write() used`,
                     severity: "Critical"
                 });
             }
@@ -300,7 +302,7 @@ const getVulnerabilitiesChecks = (code) => {
                 });
             }
         }
-    }
+    };
 };
 
 function getPattern(code, node) {
