@@ -1,45 +1,55 @@
-// Get elements from the UI
 const filePicker = document.getElementById("filePicker");
 const scanLocalBtn = document.getElementById("scanLocal");
 const dropZone = document.getElementById("dropZone");
 const fileStatus = document.getElementById("fileStatus");
 
-// Handle file selection via input
-filePicker.addEventListener("change", function () {
-    if (filePicker.files.length > 0) {
-        scanLocalBtn.disabled = false;
-        fileStatus.textContent = `Selected files: ${Array.from(filePicker.files).map(f => f.name).join(", ")}`;
-    } else {
-        scanLocalBtn.disabled = true;
-        fileStatus.textContent = "No files selected";
+// ✅ Ensure Scan Local button enables when files are selected
+filePicker.addEventListener("change", function (event) {
+    updateFileList(event.target.files);
+});
+
+// ✅ Drag-and-Drop Event Listeners
+dropZone.addEventListener("dragover", function (event) {
+    event.preventDefault();
+    dropZone.classList.add("highlight");
+});
+
+dropZone.addEventListener("dragleave", function () {
+    dropZone.classList.remove("highlight");
+});
+
+dropZone.addEventListener("drop", function (event) {
+    event.preventDefault();
+    dropZone.classList.remove("highlight");
+
+    // ✅ Process dropped files
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        filePicker.files = files; // ✅ Make sure it updates the file input field
+        updateFileList(files);
     }
 });
 
-// Handle drag-and-drop functionality
-dropZone.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    dropZone.style.backgroundColor = "#e0efff";
-});
+// ✅ Updates UI & Enables Scan Button
+function updateFileList(files) {
+    if (files.length > 0) {
+        scanLocalBtn.disabled = false;
+        let fileNames = Array.from(files).map(file => file.name).join(", ");
+        fileStatus.textContent = `Selected files: ${fileNames}`;
+    } else {
+        scanLocalBtn.disabled = true;
+        fileStatus.textContent = "No files selected.";
+    }
+}
 
-dropZone.addEventListener("dragleave", () => {
-    dropZone.style.backgroundColor = "";
-});
-
-dropZone.addEventListener("drop", (event) => {
-    event.preventDefault();
-    dropZone.style.backgroundColor = "";
-    
-    const files = event.dataTransfer.files;
-    filePicker.files = files; // Attach files to input element
-    scanLocalBtn.disabled = files.length === 0;
-    fileStatus.textContent = files.length > 0 
-        ? `Selected files: ${Array.from(files).map(f => f.name).join(", ")}` 
-        : "No files selected";
-});
-
-// Local scanning process
+// ✅ Scan Local Files
 scanLocalBtn.addEventListener("click", async function () {
     const files = filePicker.files;
+    if (files.length === 0) {
+        alert("No files selected for scanning.");
+        return;
+    }
+
     document.getElementById("localResults").innerHTML = "<p>Scanning selected files...</p>";
 
     let vulnerabilityPatterns = await loadVulnerabilityPatterns();
@@ -50,10 +60,9 @@ scanLocalBtn.addEventListener("click", async function () {
     }
 
     displayScanResults(vulnerableFiles, "localResults");
-    detectPowerShellUsage(); // NEW: Detect running PowerShell
 });
 
-// Function to read file content and scan
+// ✅ Reads File Content & Scans
 function readAndScanFile(file, vulnerabilityPatterns, vulnerableFiles) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -69,7 +78,7 @@ function readAndScanFile(file, vulnerabilityPatterns, vulnerableFiles) {
     });
 }
 
-// Function to scan file content
+// ✅ Scan File for Vulnerabilities
 function scanFile(content, vulnerabilityPatterns) {
     const vulnerabilities = [];
     vulnerabilityPatterns.forEach(({ pattern, description, severity }) => {
@@ -82,7 +91,7 @@ function scanFile(content, vulnerabilityPatterns) {
     return vulnerabilities.length > 0 ? vulnerabilities : null;
 }
 
-// Function to display scan results
+// ✅ Displays Scan Results
 function displayScanResults(vulnerableFiles, resultContainerId) {
     const resultsDiv = document.getElementById(resultContainerId);
     if (Object.keys(vulnerableFiles).length > 0) {
@@ -106,7 +115,7 @@ function displayScanResults(vulnerableFiles, resultContainerId) {
     }
 }
 
-// Function to load vulnerability patterns from patterns.json
+// ✅ Load Vulnerability Patterns from JSON
 async function loadVulnerabilityPatterns() {
     try {
         const response = await fetch("patterns.json");
@@ -116,26 +125,4 @@ async function loadVulnerabilityPatterns() {
         console.error(`[ERROR] ${error.message}`);
         return [];
     }
-}
-
-// ✅ NEW: Function to detect running PowerShell processes
-function detectPowerShellUsage() {
-    const command = navigator.userAgent.includes("Windows") ? "tasklist" : "ps aux";
-
-    fetch("https://your-server-endpoint/check-processes", { // Placeholder for actual implementation
-        method: "POST",
-        body: JSON.stringify({ command: command }),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.includes("powershell.exe") || data.includes("pwsh")) {
-            document.getElementById("localResults").innerHTML += `
-                <div class="alert alert-warning">
-                    <strong>Warning:</strong> Running PowerShell process detected!
-                </div>
-            `;
-        }
-    })
-    .catch(error => console.error("Error checking PowerShell processes:", error));
 }
