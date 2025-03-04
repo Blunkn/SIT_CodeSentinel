@@ -48,5 +48,15 @@
     "pattern": "eval\\s*\\(\\s*unescape\\s*\\(\\s*document\\.location\\.hash\\.substring\\(1\\)\\s*\\)\\s*\\)",
     "description": "Malicious eval() execution using URL hash manipulation - CVE-2017-5941",
     "severity": "High"
-  }    
+  },
+  {
+    "pattern": "fetch\\s*\\(\\s*['\"]?http[s]?:\\/\\/.*?['\"]?\\s*\\)",
+    "description": "Potential SSRF vulnerability - Unvalidated External Fetch",
+    "severity": "High"
+  },
+  {
+    "pattern": "axios\\.get\\s*\\(\\s*userInput\\s*\\)",
+    "description": "Potential SSRF vulnerability - axios.get() with unvalidated input",
+    "severity": "High"
+  }
 ]
