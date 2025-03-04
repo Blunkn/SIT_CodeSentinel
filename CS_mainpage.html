@@ -2,202 +2,217 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <title>Code Sentinel</title>
-  <script type="module" src="dist/bundle.js"></script>
-  <script defer src="logscanner.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8" />
+    <title>Code Sentinel</title>
+    <script type="module" src="dist/bundle.js"></script>
+    <script defer src="logscanner.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      width: 340px;
-      min-height: 300px;
-      font-family: Arial, sans-serif;
-      background-color: #fafafa;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+        body {
+            width: 340px;
+            min-height: 350px;
+            font-family: Arial, sans-serif;
+            background-color: #fafafa;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    .header {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
+        .header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
 
-    .logo {
-      height: 32px;
-      width: auto;
-      margin-right: 8px;
-    }
+        .logo {
+            height: 32px;
+            width: auto;
+            margin-right: 8px;
+        }
 
-    h1 {
-      font-size: 20px;
-      color: #333;
-    }
+        h1 {
+            font-size: 20px;
+            color: #333;
+        }
 
-    .description {
-      font-size: 14px;
-      color: #666;
-      text-align: center;
-      margin-bottom: 15px;
-      padding: 0 10px;
-    }
+        .description {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
 
-    .scan-controls {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+        .scan-controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    .button-container {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 300px;
-    }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 300px;
+        }
 
-    button {
-      padding: 10px 16px;
-      font-size: 14px;
-      color: #fff;
-      background-color: #0078d4;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin: 5px;
-      flex: 1;
-    }
+        button {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #fff;
+            background-color: #0078d4;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            flex: 1;
+        }
 
-    button:hover {
-      background-color: #0063a8;
-    }
+        button:hover {
+            background-color: #0063a8;
+        }
 
-    button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
 
-    .divider {
-      width: 100%;
-      max-width: 280px;
-      height: 1px;
-      background: rgba(0, 0, 0, 0.1); /* Translucent line */
-      margin: 15px 0;
-    }
+        .divider {
+            width: 100%;
+            max-width: 280px;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.1);
+            margin: 15px 0;
+        }
 
-    .file-input-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      max-width: 300px;
-      margin-top: 8px;
-    }
+        .file-input-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 8px;
+        }
 
-    #filePicker {
-      flex: 1;
-    }
+        .drop-zone {
+            width: 90%;
+            padding: 16px;
+            border: 2px dashed #0078d4;
+            text-align: center;
+            color: #0078d4;
+            margin-bottom: 10px;
+            background-color: #e3f2fd;
+        }
 
-    .status-text {
-      font-size: 13px;
-      color: #666;
-      margin-top: 6px;
-    }
+        .drop-zone.highlight {
+            background-color: #d0ebff;
+        }
 
-    .spinner {
-      display: none;
-      width: 16px;
-      height: 16px;
-      margin-left: 5px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #0078d4;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
+        #filePicker {
+            flex: 1;
+        }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+        .status-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 6px;
+        }
 
-    #results, #localResults {
-      width: 100%;
-      margin-top: 16px;
-      text-align: left;
-    }
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            margin-left: 5px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #0078d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
 
-    .alert {
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 4px;
-      font-size: 13px;
-    }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-    .alert-warning {
-      background-color: #fff3e0;
-      border: 1px solid #ffb74d;
-      color: #e65100;
-    }
+        #results, #localResults {
+            width: 100%;
+            margin-top: 16px;
+            text-align: left;
+        }
 
-    .alert-success {
-      background-color: #e8f5e9;
-      border: 1px solid #81c784;
-      color: #2e7d32;
-    }
+        .alert {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
 
-    .alert-danger {
-      background-color: #ffebee;
-      border: 1px solid #e57373;
-      color: #c62828;
-    }
-  </style>
+        .alert-warning {
+            background-color: #fff3e0;
+            border: 1px solid #ffb74d;
+            color: #e65100;
+        }
+
+        .alert-success {
+            background-color: #e8f5e9;
+            border: 1px solid #81c784;
+            color: #2e7d32;
+        }
+
+        .alert-danger {
+            background-color: #ffebee;
+            border: 1px solid #e57373;
+            color: #c62828;
+        }
+    </style>
 </head>
 
 <body>
-  <div class="header">
-    <img src="CSLogo.png" alt="Code Sentinel Logo" class="logo">
-    <h1>Code Sentinel</h1>
-  </div>
-
-  <p class="description">
-    Scan your GitHub repository or upload local files for vulnerabilities.
-  </p>
-
-  <!-- GitHub Scan Section -->
-  <div class="scan-controls">
-    <button id="scanBtn">
-      Scan GitHub <span class="spinner"></span>
-    </button>
-  </div>
-
-  <!-- Divider -->
-  <div class="divider"></div>
-
-  <!-- Local File Scan Section -->
-  <div class="scan-controls">
-    <p class="description">Scan Local Files:</p>
-    <div class="file-input-container">
-      <input type="file" id="filePicker" multiple />
+    <div class="header">
+        <img src="CSLogo.png" alt="Code Sentinel Logo" class="logo">
+        <h1>Code Sentinel</h1>
     </div>
 
-    <div class="button-container">
-      <button id="scanLocal" disabled>Scan Local</button>
+    <p class="description">
+        Scan your GitHub repository or upload local files for vulnerabilities.
+    </p>
+
+    <div class="scan-controls">
+        <button id="scanBtn">Scan GitHub <span class="spinner"></span></button>
     </div>
 
-    <p class="status-text" id="fileStatus">No files selected</p>
-  </div>
+    <div class="divider"></div>
 
-  <div id="results"></div>
-  <div id="localResults"></div>
+    <div class="scan-controls">
+        <p class="description">Scan Local Files:</p>
+
+        <!-- Drag and Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            Drag & Drop Files Here or Click Below to Select
+        </div>
+
+        <div class="file-input-container">
+            <input type="file" id="filePicker" multiple />
+        </div>
+
+        <div class="button-container">
+            <button id="scanLocal" disabled>Scan Local</button>
+        </div>
+
+        <p class="status-text" id="fileStatus">No files selected</p>
+    </div>
+
+    <div id="results"></div>
+    <div id="localResults"></div>
 
 </body>
 
