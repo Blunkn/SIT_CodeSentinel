@@ -1,53 +1,62 @@
 [
-    {
+  {
       "pattern": "\\$\\{jndi:ldap:\\/\\/.*?\\}",
       "description": "JNDI LDAP Injection - CVE-2021-44228",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "\\$\\{jndi:rmi:\\/\\/.*?\\}",
       "description": "JNDI RMI Injection - CVE-2021-44228",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "\\$\\{jndi:dns:\\/\\/.*?\\}",
       "description": "JNDI DNS Injection - CVE-2021-44228",
       "severity": "High"
-    },
-    {
+  },
+  {
       "pattern": "org\\.apache\\.logging\\.log4j\\.core\\.lookup\\.JndiLookup",
       "description": "JndiLookup Class Usage (Log4Shell)",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "logger\\.error\\(.*\\$\\{jndi:.*?\\}.*\\)",
       "description": "Logging Unfiltered User Input - Possible RCE",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "logger\\.warn\\(.*\\$\\{jndi:.*?\\}.*\\)",
       "description": "Logging Unfiltered User Input - Possible RCE",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "logger\\.info\\(.*\\$\\{jndi:.*?\\}.*\\)",
       "description": "Logging Unfiltered User Input - Potential Vulnerability",
       "severity": "High"
-    },
-    {
+  },
+  {
       "pattern": "User-Agent: .*?\\$\\{jndi:.*?\\}",
       "description": "User-Agent Header Exploit (Log4Shell Attack)",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "X-Forwarded-For: .*?\\$\\{jndi:.*?\\}",
       "description": "X-Forwarded-For Header Exploit (Log4Shell Attack)",
       "severity": "Critical"
-    },
-    {
+  },
+  {
       "pattern": "eval\\s*\\(\\s*unescape\\s*\\(\\s*document\\.location\\.hash\\.substring\\(1\\)\\s*\\)\\s*\\)",
       "description": "Malicious eval() execution using URL hash manipulation - CVE-2017-5941",
       "severity": "High"
-    }    
-  ]
-  
+  },
+  {
+      "pattern": "fetch\\s*\\(\\s*['\"]?http[s]?:\\/\\/.*?['\"]?\\s*\\)",
+      "description": "Potential SSRF vulnerability - Unvalidated External Fetch",
+      "severity": "High"
+  },
+  {
+      "pattern": "axios\\.get\\s*\\(\\s*userInput\\s*\\)",
+      "description": "Potential SSRF vulnerability - axios.get() with unvalidated input",
+      "severity": "High"
+  }
+]
