@@ -1,106 +1,72 @@
-import * as scanner from "./script.js"
-
-document.getElementById("scanBtn").addEventListener("click", async function () {
-    // Show the spinner while scanning
-    const button = this;
-    const spinner = button.querySelector(".spinner");
-    button.disabled = true;
-    spinner.style.display = "inline-block";
-    document.getElementById("results").innerHTML = ""; // Clear previous results
-
-    // Get the current GitHub URL
-    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-        const url = new URL(tabs[0].url);
-        const pathParts = url.pathname.split('/');
-
-        // Ensure it's a valid GitHub repository page
-        if (pathParts.length < 3) {
-            alert("Please open a valid GitHub repository page.");
-            button.disabled = false;
-            spinner.style.display = "none";
-            return;
-        }
-
-        const user = pathParts[1];
-        const repo = pathParts[2];
-
-        // Call the scan function to scan the repo
-        await scanGitHubRepo(user, repo);
-
-        // Hide the spinner and re-enable the button
-        button.disabled = false;
-        spinner.style.display = "none";
-    });
+document.getElementById("filePicker").addEventListener("change", function (event) {
+    const files = event.target.files;
+    document.getElementById("scanLocal").disabled = files.length === 0;
 });
 
-async function getDefaultBranch(user, repo) {
-    const apiUrl = `https://api.github.com/repos/${user}/${repo}`;
+document.getElementById("scanLocal").addEventListener("click", async function () {
+    const files = document.getElementById("filePicker").files;
+    document.getElementById("localResults").innerHTML = "<p>Scanning selected files...</p>";
 
-    try {
-        const response = await fetch(apiUrl);
-        if (response.ok) {
-            const data = await response.json();
-            return data.default_branch;
-        } else {
-            console.error(`[ERROR] Failed to fetch default branch: ${response.status}`);
-            return "main";
-        }
-    } catch (error) {
-        console.error(`[ERROR] Error fetching default branch: ${error.message}`);
-        return "main";
+    let vulnerabilityPatterns = await loadVulnerabilityPatterns();
+    let vulnerableFiles = {};
+
+    for (const file of files) {
+        await readAndScanFile(file, vulnerabilityPatterns, vulnerableFiles);
     }
-}
 
-// Function to fetch file content from GitHub
-async function getFileContentFromGitHub(user, repo, filePath) {
-    const defaultBranch = await getDefaultBranch(user, repo);
-    const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/${defaultBranch}/${filePath}`;
+    displayScanResults(vulnerableFiles, "localResults");
+});
 
-    try {
-        const response = await fetch(rawUrl);
-        if (response.ok) {
-            return await response.text();
-        } else {
-            console.error(`[ERROR] Failed to fetch ${filePath}: ${response.status}`);
-            return null;
-        }
-    } catch (error) {
-        console.error(`[ERROR] Error fetching file ${filePath}: ${error.message}`);
-        return null;
-    }
-}
-
-// Function to get all files from the GitHub repository
-async function getAllFilesInRepo(user, repo, path = "") {
-    const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-
-    try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-            console.error(`[Error] Failed to fetch file list from ${path || "root"}: ${response.status}`);
-            return [];
-        }
-        
-        const data = await response.json();
-        let files = [];
-
-        for (const item of data) {
-            if (item.type === "file") {
-                files.push(item.path);
-            } else if (item.type === "dir") {
-                if (item.path.includes("node_modules")) {
-                    console.log(`[INFO] Skipping folder: ${item.path}`);
-                    continue;
-                }
-                const subFiles = await getAllFilesInRepo(user, repo, item.path);
-                files = files.concat(subFiles);
+// Function to read file content and scan
+function readAndScanFile(file, vulnerabilityPatterns, vulnerableFiles) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            const content = event.target.result;
+            const result = scanFile(content, vulnerabilityPatterns);
+            if (result) {
+                vulnerableFiles[file.name] = result;
             }
-        }
+            resolve();
+        };
+        reader.readAsText(file);
+    });
+}
 
-        return files;
-    } catch (error) {
-        console.error(`[ERROR] Error fetching repo file list: ${error.message}`);
-        return [];
+// Function to scan file content
+function scanFile(content, vulnerabilityPatterns) {
+    const vulnerabilities = [];
+    vulnerabilityPatterns.forEach(({ pattern, description, severity }) => {
+        const regex = new RegExp(pattern, "g");
+        if (regex.test(content)) {
+            vulnerabilities.push({ description, severity, pattern });
+        }
+    });
+
+    return vulnerabilities.length > 0 ? vulnerabilities : null;
+}
+
+// Function to display scan results
+function displayScanResults(vulnerableFiles, resultContainerId) {
+    const resultsDiv = document.getElementById(resultContainerId);
+    if (Object.keys(vulnerableFiles).length > 0) {
+        resultsDiv.innerHTML = "<h3>Vulnerabilities Detected:</h3>";
+        Object.entries(vulnerableFiles).forEach(([file, issues]) => {
+            const fileElement = document.createElement("div");
+            fileElement.classList.add("finding");
+            fileElement.innerHTML = `<strong>${file}</strong>`;
+            issues.forEach(({ description, severity, pattern }) => {
+                fileElement.innerHTML += `
+                    <div class="alert alert-danger">
+                        <strong>${description}</strong> (Severity: ${severity})
+                        <pre class="code-snippet">${pattern}</pre>
+                    </div>
+                `;
+            });
+            resultsDiv.appendChild(fileElement);
+        });
+    } else {
+        resultsDiv.innerHTML = `<div class="alert alert-success">No vulnerabilities detected.</div>`;
     }
 }
 
@@ -114,90 +80,4 @@ async function loadVulnerabilityPatterns() {
         console.error(`[ERROR] ${error.message}`);
         return [];
     }
-}
-
-// Function to scan for vulnerabilities
-async function scanFile(content, vulnerabilityPatterns) {
-    const vulnerabilities = [];
-
-    vulnerabilityPatterns.forEach(({ pattern, description, severity }) => {
-        const regex = new RegExp(pattern, "g");
-        if (regex.test(content)) {
-            vulnerabilities.push({ description, severity, pattern });
-        }
-    });
-
-    return vulnerabilities.length > 0 ? vulnerabilities : null;
-}
-
-// Function to scan the entire GitHub repository
-async function scanGitHubRepo(user, repo) {
-    const files = await getAllFilesInRepo(user, repo);
-    const vulnerabilityPatterns = await loadVulnerabilityPatterns();
-    let vulnerableFiles = {};
-
-    for (const filePath of files) {
-        const content = await getFileContentFromGitHub(user, repo, filePath);
-        if (content) {
-            var result = await scanFile(content, vulnerabilityPatterns);
-            if (filePath.endsWith(".js")) {
-                if (result) {
-                    result = result.concat(acornScan(content));
-                }
-                else {
-                    result = acornScan(content);
-                }
-            }
-            else if (filePath.endsWith(".html")) {
-                const scripts = extractScriptsFromHTML(content);
-                scripts.forEach(script => {
-                    const scriptVulns = acornScan(script);
-                    if (scriptVulns) {
-                        result = result ? result.concat(scriptVulns) : scriptVulns;
-                    }
-                });
-            }
-            if (result) {
-                vulnerableFiles[filePath] = result;
-            }
-        }
-    }
-
-    // Display results
-    const resultsDiv = document.getElementById("results");
-    if (Object.keys(vulnerableFiles).length > 0) {
-        resultsDiv.innerHTML = "<h3>Vulnerabilities Detected:</h3>";
-        Object.entries(vulnerableFiles).forEach(([file, issues]) => {
-            const fileElement = document.createElement("div");
-            fileElement.classList.add("finding");
-            fileElement.innerHTML = `<strong>${file}</strong>`;
-            issues.forEach(({ description, severity, pattern }) => {
-                fileElement.innerHTML += `
-                  <div class="alert alert-danger">
-                      <strong>${description}</strong> (Severity: ${severity})
-                      <pre class="code-snippet">${pattern}</pre>
-                  </div>
-              `;
-            });
-            resultsDiv.appendChild(fileElement);
-        });
-    } else {
-        resultsDiv.innerHTML += `<div class="alert alert-success"> No vulnerabilities detected.</div>`;
-    }
-}
-
-function acornScan(code) {
-    return scanner.parseJSCode(code).length > 0 ? scanner.parseJSCode(code) : null;
-}
-
-function extractScriptsFromHTML(code) {
-    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-    let scripts = [];
-    let match;
-
-    while ((match = scriptRegex.exec(code)) !== null) {
-        scripts.push(match[1]);
-    }
-
-    return scripts;
 }

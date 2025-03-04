@@ -4,9 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>Code Sentinel</title>
-  <!-- Load external JS. Use 'defer' so DOM is loaded before script runs. -->
-  <!-- <script src="script.js" defer></script> -->
   <script type="module" src="dist/bundle.js"></script>
+  <script defer src="logscanner.js"></script>
   <style>
     * {
       margin: 0;
@@ -15,9 +14,8 @@
     }
 
     body {
-      width: 300px;
-      /* Adjust popup width if desired */
-      min-height: 200px;
+      width: 320px;
+      min-height: 250px;
       font-family: Arial, sans-serif;
       background-color: #fafafa;
       padding: 16px;
@@ -61,6 +59,7 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      margin-bottom: 10px;
     }
 
     button:hover {
@@ -72,7 +71,7 @@
       cursor: not-allowed;
     }
 
-    #results {
+    #results, #localResults {
       width: 100%;
       margin-top: 16px;
     }
@@ -102,21 +101,6 @@
       color: #c62828;
     }
 
-    .finding {
-      margin-top: 8px;
-    }
-
-    .code-snippet {
-      background-color: rgba(0, 0, 0, 0.05);
-      padding: 8px;
-      border-radius: 3px;
-      font-family: monospace;
-      font-size: 12px;
-      white-space: pre-wrap;
-      word-break: break-all;
-      margin-top: 4px;
-    }
-
     .spinner {
       display: none;
       width: 20px;
@@ -129,17 +113,8 @@
     }
 
     @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .scanning .spinner {
-      display: inline-block;
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -151,19 +126,17 @@
   </div>
 
   <p class="description">
-    Scans your current GitHub page for suspicious or malicious code.
+    Scan your current GitHub page or select local files for vulnerabilities.
   </p>
 
-  <!-- Button without inline event -->
-  <!-- <button id="scanBtn">Scan GitHub</button> -->
   <div class="scan-controls">
-    <button id="scanBtn">
-      Scan GitHub
-      <span class="spinner"></span>
-    </button>
+    <button id="scanBtn">Scan GitHub <span class="spinner"></span></button>
+    <input type="file" id="filePicker" multiple />
+    <button id="scanLocal" disabled>Scan Local</button>
   </div>
 
   <div id="results"></div>
+  <div id="localResults"></div>
 
 </body>
 
