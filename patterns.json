@@ -58,5 +58,10 @@
     "pattern": "axios\\.get\\s*\\(\\s*userInput\\s*\\)",
     "description": "Potential SSRF vulnerability - axios.get() with unvalidated input",
     "severity": "High"
-  }
+  },
+  {
+    "pattern": "(curl|wget|echo).*?['\"].*(<script>|javascript:|onerror=|onload=).*?['\"]",
+    "description": "Potential XSS injection via command-line processing",
+    "severity": "High"
+  }  
 ]
