@@ -14,8 +14,8 @@
     }
 
     body {
-      width: 320px;
-      min-height: 250px;
+      width: 340px;
+      min-height: 300px;
       font-family: Arial, sans-serif;
       background-color: #fafafa;
       padding: 16px;
@@ -47,8 +47,22 @@
       font-size: 14px;
       color: #666;
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       padding: 0 10px;
+    }
+
+    .scan-controls {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 300px;
     }
 
     button {
@@ -59,7 +73,8 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-bottom: 10px;
+      margin: 5px;
+      flex: 1;
     }
 
     button:hover {
@@ -71,14 +86,58 @@
       cursor: not-allowed;
     }
 
+    .divider {
+      width: 100%;
+      max-width: 280px;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.1); /* Translucent line */
+      margin: 15px 0;
+    }
+
+    .file-input-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 300px;
+      margin-top: 8px;
+    }
+
+    #filePicker {
+      flex: 1;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      margin-left: 5px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #0078d4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     #results, #localResults {
       width: 100%;
       margin-top: 16px;
+      text-align: left;
     }
 
     .alert {
       padding: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       border-radius: 4px;
       font-size: 13px;
     }
@@ -100,22 +159,6 @@
       border: 1px solid #e57373;
       color: #c62828;
     }
-
-    .spinner {
-      display: none;
-      width: 20px;
-      height: 20px;
-      margin-left: 8px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #0078d4;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
   </style>
 </head>
 
@@ -126,13 +169,31 @@
   </div>
 
   <p class="description">
-    Scan your current GitHub page or select local files for vulnerabilities.
+    Scan your GitHub repository or upload local files for vulnerabilities.
   </p>
 
+  <!-- GitHub Scan Section -->
   <div class="scan-controls">
-    <button id="scanBtn">Scan GitHub <span class="spinner"></span></button>
-    <input type="file" id="filePicker" multiple />
-    <button id="scanLocal" disabled>Scan Local</button>
+    <button id="scanBtn">
+      Scan GitHub <span class="spinner"></span>
+    </button>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Local File Scan Section -->
+  <div class="scan-controls">
+    <p class="description">Scan Local Files:</p>
+    <div class="file-input-container">
+      <input type="file" id="filePicker" multiple />
+    </div>
+
+    <div class="button-container">
+      <button id="scanLocal" disabled>Scan Local</button>
+    </div>
+
+    <p class="status-text" id="fileStatus">No files selected</p>
   </div>
 
   <div id="results"></div>
