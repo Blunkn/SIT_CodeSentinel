@@ -1,4 +1,5 @@
 import { parse } from 'acorn';
+import { parse as parse5 } from "parse5";
 import * as walk from 'acorn-walk';
 
 // script.js
@@ -229,6 +230,33 @@ export function parseJSCode(code) {
         console.error("Error parsing JavaScript: ", error);
         return null;
     }
+}
+
+export const parseHTMLCode = (htmlCode) => {
+    const vulnerabilities = [];
+
+    const traverseNodes = (node) => {
+        if (node.attrs) {
+            for (const attr of node.attrs) {
+                if (attr.name === "th:utext") {
+                    vulnerabilities.push({
+                        pattern: attr.value,
+                        description: "Potential XSS: Thymeleaf `th:utext` used (renders unescaped HTML)",
+                        severity: "Critical"
+                    });
+                }
+            }
+        }
+
+        if (node.childNodes) {
+            node.childNodes.forEach(traverseNodes);
+        }
+    };
+
+    const parsedHTML = parse5(htmlCode);
+    traverseNodes(parsedHTML);
+
+    return vulnerabilities;
 }
 
 const getVulnerabilitiesChecks = (code) => {

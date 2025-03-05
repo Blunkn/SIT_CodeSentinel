@@ -31,6 +31,24 @@ document.getElementById("scanBtn").addEventListener("click", async function () {
     });
 });
 
+async function getDefaultBranch(user, repo) {
+    const apiUrl = `https://api.github.com/repos/${user}/${repo}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+            const data = await response.json();
+            return data.default_branch;
+        } else {
+            console.error(`[ERROR] Failed to fetch default branch: ${response.status}`);
+            return "main";
+        }
+    } catch (error) {
+        console.error(`[ERROR] Error fetching default branch: ${error.message}`);
+        return "main";
+    }
+}
+
 // Fetch all files from GitHub repository
 async function getAllFilesInRepo(user, repo, path = "") {
     const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
@@ -71,7 +89,29 @@ async function scanGitHubRepo(user, repo) {
     for (const filePath of files) {
         const content = await getFileContentFromGitHub(user, repo, filePath);
         if (content) {
-            let result = await scanFile(content, vulnerabilityPatterns);
+            var result = await scanFile(content, vulnerabilityPatterns);
+            if (filePath.endsWith(".js")) {
+                if (result) {
+                    result = result.concat(acornScan(content));
+                }
+                else {
+                    result = acornScan(content);
+                }
+            }
+            else if (filePath.endsWith(".html")) {
+                const htmlVulns = scanHTMLCode(content);
+                if (htmlVulns) {
+                    result = result ? result.concat(htmlVulns) : htmlVulns;
+                }
+
+                const scripts = extractScriptsFromHTML(content);
+                scripts.forEach(script => {
+                    const scriptVulns = acornScan(script);
+                    if (scriptVulns) {
+                        result = result ? result.concat(scriptVulns) : scriptVulns;
+                    }
+                });
+            }
             if (result) {
                 vulnerableFiles[filePath] = result;
             }
@@ -83,7 +123,8 @@ async function scanGitHubRepo(user, repo) {
 
 // Fetch file content from GitHub
 async function getFileContentFromGitHub(user, repo, filePath) {
-    const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/${filePath}`;
+    const defaultBranch = await getDefaultBranch(user, repo);
+    const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/${defaultBranch}/${filePath}`;
 
     try {
         const response = await fetch(rawUrl);
@@ -237,4 +278,25 @@ function displayResults(vulnerableFiles, resultContainerId) {
     } else {
         resultsDiv.innerHTML = `<div class="alert alert-success"> No vulnerabilities detected.</div>`;
     }
+}
+
+function acornScan(code) {
+    return scanner.parseJSCode(code).length > 0 ? scanner.parseJSCode(code) : null;
+}
+
+function extractScriptsFromHTML(code) {
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let scripts = [];
+    let match;
+
+    while ((match = scriptRegex.exec(code)) !== null) {
+        scripts.push(match[1]);
+    }
+
+    return scripts;
+}
+
+function scanHTMLCode(code) {
+    const vulnerabilities = scanner.parseHTMLCode(code);
+    return vulnerabilities.length > 0 ? vulnerabilities : null;
 }
