@@ -24,7 +24,12 @@ document.getElementById("scanBtn").addEventListener("click", async function () {
         const user = pathParts[1];
         const repo = pathParts[2];
 
-        await scanGitHubRepo(user, repo);
+        try {
+            await scanGitHubRepo(user, repo);
+        } catch (error) {
+            console.error("GitHub scan error:", error);
+            document.getElementById("results").innerHTML = `<div class="alert alert-danger">Error during GitHub scan: ${error.message}</div>`;
+        }
 
         button.disabled = false;
         spinner.style.display = "none";
@@ -89,7 +94,7 @@ async function scanGitHubRepo(user, repo) {
     for (const filePath of files) {
         const content = await getFileContentFromGitHub(user, repo, filePath);
         if (content) {
-            var result = await scanFile(content, vulnerabilityPatterns);
+            let result = await scanFile(content, vulnerabilityPatterns, filePath); //Pass file path to scanfile
             if (filePath.endsWith(".js")) {
                 if (result) {
                     result = result.concat(acornScan(content));
@@ -117,8 +122,12 @@ async function scanGitHubRepo(user, repo) {
             }
         }
     }
+    //Filter out files which do not contain files before displaying results
+    const filteredVulnerableFiles = Object.fromEntries(
+        Object.entries(vulnerableFiles).filter(([key, value]) => value !== null)
+    );
 
-    displayResults(vulnerableFiles, "results");
+    displayResults(filteredVulnerableFiles, "results");
 }
 
 // Fetch file content from GitHub
@@ -140,95 +149,40 @@ async function getFileContentFromGitHub(user, repo, filePath) {
     }
 }
 
-// ========================== LOCAL FILE SCANNING ==========================
+// ✅ Scan File for Vulnerabilities
+async function scanFile(content, vulnerabilityPatterns, filename) {
+    const vulnerabilities = [];
 
-const filePicker = document.getElementById("filePicker");
-const scanLocalBtn = document.getElementById("scanLocal");
-const dropZone = document.getElementById("dropZone");
-const fileStatus = document.getElementById("fileStatus");
-
-// Enable scan button when files are selected
-filePicker.addEventListener("change", function () {
-    if (filePicker.files.length > 0) {
-        scanLocalBtn.disabled = false;
-        fileStatus.textContent = `${filePicker.files.length} file(s) selected`;
-    } else {
-        scanLocalBtn.disabled = true;
-        fileStatus.textContent = "No files selected";
-    }
-});
-
-// Drag & Drop Events
-dropZone.addEventListener("dragover", function (event) {
-    event.preventDefault();
-    dropZone.classList.add("highlight");
-});
-
-dropZone.addEventListener("dragleave", function () {
-    dropZone.classList.remove("highlight");
-});
-
-dropZone.addEventListener("drop", function (event) {
-    event.preventDefault();
-    dropZone.classList.remove("highlight");
-
-    const files = event.dataTransfer.files;
-    if (files.length > 0) {
-        filePicker.files = files;
-        updateFileList(files);
-    }
-});
-
-// Updates UI & Enables Scan Button
-function updateFileList(files) {
-    if (files.length > 0) {
-        scanLocalBtn.disabled = false;
-        fileStatus.textContent = `${files.length} file(s) selected`;
-    } else {
-        scanLocalBtn.disabled = true;
-        fileStatus.textContent = "No files selected.";
-    }
-}
-
-// Scan Local Files (NOW SCANS ALL FILE TYPES)
-scanLocalBtn.addEventListener("click", async function () {
-    document.getElementById("localResults").innerHTML = "<p>Scanning selected files...</p>";
-
-    const files = filePicker.files;
-    if (files.length === 0) {
-        alert("No files selected for scanning.");
-        return;
-    }
-
-    let vulnerabilityPatterns = await loadVulnerabilityPatterns();
-    let vulnerableFiles = {};
-
-    for (const file of files) {
-        await readAndScanFile(file, vulnerabilityPatterns, vulnerableFiles);
-    }
-
-    displayResults(vulnerableFiles, "localResults");
-});
-
-// Reads File Content & Scans (NO FILE TYPE RESTRICTIONS)
-function readAndScanFile(file, vulnerabilityPatterns, vulnerableFiles) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            const content = event.target.result;
-            const result = scanFile(content, vulnerabilityPatterns);
-            if (result) {
-                vulnerableFiles[file.name] = result;
-            }
-            resolve();
-        };
-        reader.readAsText(file);
+    vulnerabilityPatterns.forEach(({ pattern, description, severity }) => {
+        const regex = new RegExp(pattern, "g");
+        if (regex.test(content)) {
+            vulnerabilities.push({ description, severity, pattern });
+        }
     });
+    if (filename.endsWith(".js")) {
+        const acornVulns = acornScan(content);
+        if (acornVulns) {
+            vulnerabilities.concat(acornVulns);
+        }
+    }
+    else if (filename.endsWith(".html")) {
+        const htmlVulns = scanHTMLCode(content);
+        if (htmlVulns) {
+            vulnerabilities.concat(htmlVulns);
+        }
+
+        const scripts = extractScriptsFromHTML(content);
+        scripts.forEach(script => {
+            const scriptVulns = acornScan(script);
+            if (scriptVulns) {
+                vulnerabilities.concat(scriptVulns);
+            }
+        });
+    }
+
+    return vulnerabilities.length > 0 ? vulnerabilities : null;
 }
-
-// ========================== COMMON SCAN FUNCTIONS ==========================
-
-// Load Vulnerability Patterns from JSON
+// ✅ Load Vulnerability Patterns from JSON
 async function loadVulnerabilityPatterns() {
     try {
         const response = await fetch("patterns.json");
@@ -239,22 +193,8 @@ async function loadVulnerabilityPatterns() {
         return [];
     }
 }
-
-// Scan File for Vulnerabilities
-async function scanFile(content, vulnerabilityPatterns) {
-    const vulnerabilities = [];
-
-    vulnerabilityPatterns.forEach(({ pattern, description, severity }) => {
-        const regex = new RegExp(pattern, "g");
-        if (regex.test(content)) {
-            vulnerabilities.push({ description, severity, pattern });
-        }
-    });
-
-    return vulnerabilities.length > 0 ? vulnerabilities : null;
-}
-
-// Display Scan Results
+// ✅ Displays Scan Results
+// Reverted to the non XSS fix version
 function displayResults(vulnerableFiles, resultContainerId) {
     const resultsDiv = document.getElementById(resultContainerId);
     resultsDiv.innerHTML = "";
@@ -262,6 +202,7 @@ function displayResults(vulnerableFiles, resultContainerId) {
     if (Object.keys(vulnerableFiles).length > 0) {
         resultsDiv.innerHTML = "<h3>Vulnerabilities Detected:</h3>";
         Object.entries(vulnerableFiles).forEach(([file, issues]) => {
+          console.log("Issues:", issues); // ADDED DEBUGGING STATEMENT
             const fileElement = document.createElement("div");
             fileElement.classList.add("finding");
             fileElement.innerHTML = `<strong>${file}</strong>`;
@@ -276,7 +217,7 @@ function displayResults(vulnerableFiles, resultContainerId) {
             resultsDiv.appendChild(fileElement);
         });
     } else {
-        resultsDiv.innerHTML = `<div class="alert alert-success"> No vulnerabilities detected.</div>`;
+        resultsDiv.innerHTML = `<div class="alert alert-success">No vulnerabilities detected.</div>`;
     }
 }
 
